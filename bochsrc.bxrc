@@ -1,0 +1,6 @@
+romimage: file="tools/bochs-2.7/bios/BIOS-bochs-latest"
+vgaromimage: file="tools/bochs-2.7/bios/VGABIOS-lgpl-latest"
+floppya: 1_44="build/boot.img", status=inserted
+display_library: win32, options=gui_debug
+boot: floppy
+memory: guest=4096, host=512

@@ -1,0 +1,8 @@
+FORMAT RAW BIN
+OPTION NODEFAULTLIBS,
+    QUIET,
+    START=start,
+    VERBOSE,
+    OFFSET=0x7c00,
+    STACK=0x1000,
+    MAP=build/boot.map
