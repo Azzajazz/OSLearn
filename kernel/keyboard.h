@@ -130,6 +130,4 @@ typedef struct {
     key_event event;
 } key_query_result;
 
-key_query_result queryKeyEvent(void);
-
 #endif

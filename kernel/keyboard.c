@@ -1,5 +1,5 @@
-#include "keyboard.h"
 #include "inttypes.h"
+#include "keyboard.h"
 
 #define global static
 

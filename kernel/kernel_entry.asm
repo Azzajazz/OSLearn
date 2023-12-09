@@ -26,3 +26,6 @@ hang:
     cli
     hlt
     jmp hang
+
+%include "kernel/interrupts.asm"
+%include "kernel/x86.asm"

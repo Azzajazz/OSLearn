@@ -8,9 +8,6 @@ extern _stringPrint
 extern _printFmt
 extern _keyboardInterrupt
 
-CR equ 0x0d
-LF equ 0x0a
-
 PIC1_COMMAND equ 0x20
 PIC1_DATA equ 0x21
 PIC2_COMMAND equ 0xA0

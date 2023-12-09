@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "print.h"
+#include "inttypes.h"
 #include "string.h"
 
 #define global static

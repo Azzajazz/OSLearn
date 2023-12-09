@@ -18,16 +18,10 @@ REM Compile stage2.bin
 wlink name build\stage2.bin file build\stage2.obj @boot\stage2.lnk
 
 REM Compile kernel.bin
-REM @TODO: Make this more automated
 %mingwPath%gcc %gccFlags% -o build\main.obj kernel\main.c
-%mingwPath%gcc %gccFlags% -o build\string.obj kernel\string.c
-%mingwPath%gcc %gccFlags% -o build\print.obj kernel\print.c
 %mingwPath%gcc %gccFlags% -o build\x86_c.obj kernel\x86.c
-%mingwPath%gcc %gccFlags% -o build\keyboard.obj kernel\keyboard.c
 %nasmExe% %nasmFlags% -o build\kernel_entry.obj -fwin32 kernel\kernel_entry.asm
-%nasmExe% %nasmFlags% -o build\interrupts.obj -fwin32 kernel\interrupts.asm
-%nasmExe% %nasmFlags% -o build\x86.obj -fwin32 kernel\x86.asm
-%mingwPath%ld -o build\kernel.tmp build\main.obj build\kernel_entry.obj build\string.obj build\print.obj build\interrupts.obj build\x86.obj build\x86_c.obj build\keyboard.obj -T kernel\kernel.lnk -Map build\kernel.map -LC:\MinGW\lib\gcc\mingw32\6.3.0 -lgcc
+%mingwPath%ld -o build\kernel.tmp build\kernel_entry.obj build\main.obj build\x86_c.obj -T kernel\kernel.lnk -Map build\kernel.map -LC:\MinGW\lib\gcc\mingw32\6.3.0 -lgcc
 %mingwPath%objcopy -O binary build\kernel.tmp build\kernel.bin
 
 REM Preparing the boot image

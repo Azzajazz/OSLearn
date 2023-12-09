@@ -1,8 +1,9 @@
 #include "inttypes.h"
-#include "string.h"
-#include "print.h"
 #include "x86.h"
-#include "keyboard.h"
+
+#include "string.c"
+#include "print.c"
+#include "keyboard.c"
 
 #define global static
 
