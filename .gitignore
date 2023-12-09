@@ -1,0 +1,7 @@
+build
+bx_enh_dbg.ini
+tools/Watcom
+tools/frhed
+tools/qemu
+tools/NASM
+tools/bochs-2.7

@@ -1,0 +1,20 @@
+ENTRY(start)
+
+/*phys = 0x100000;*/
+virt = 0xC0000000;
+
+SECTIONS {
+    . = virt;
+    .text : {
+        *(.entry)
+        *(.text)
+    }
+    .data : {
+        *(.data)
+    }
+    __bss_start = .;
+    .bss : {
+        *(.bss)
+    }
+    __bss_finish = .;
+}
