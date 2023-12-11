@@ -2,10 +2,10 @@
 
 
 set handmadeToolsDir=tools\handmade\build\
-set nasmFlags=-Wall -Werror -i . -i boot
+set nasmFlags=-Wall -Werror -i . -i boot -g
 set nasmExe=tools\NASM\nasm.exe
 set wccFlags=-q -d3 -mc -wx -we -zl -s -ecc -i=tools\Watcom\h
-set gccFlags=-ffreestanding -Wall -Wpedantic -Wextra -Werror -Wno-unused -c
+set gccFlags=-ffreestanding -Wall -Wpedantic -Wextra -Werror -Wno-unused -c -Wno-error=switch -ggdb
 set mingwPath=C:\MinGW\bin\
 
 pushd W:\

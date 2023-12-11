@@ -3,6 +3,8 @@
 
 #include "inttypes.h"
 
+#define x86Interrupt(code) asm volatile ("int $"#code)
+
 // Port IO functions
 extern void __attribute__((fastcall)) x86Out8(uint8 port, uint8 message);
 extern void __attribute__((fastcall)) x86Out16(uint8 port, uint16 message);

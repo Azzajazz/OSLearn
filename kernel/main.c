@@ -1,18 +1,17 @@
 #include "inttypes.h"
 #include "x86.h"
 
+#define global static
+
 #include "string.c"
 #include "print.c"
 #include "keyboard.c"
-
-#define global static
 
 extern void testHandler(void);
 extern void pitHandler(void);
 extern void keyboardHandler(void);
 typedef void (*interruptHandler)(void);
 
-#define x86Interrupt(code) asm volatile ("int $"#code)
 
 typedef struct __attribute__((packed)) {
     uint16 offsetLow;
@@ -52,8 +51,13 @@ void kernelMain(boot_info* info) {
 
     for(;;) {
         key_query_result queryResult = queryKeyEvent();
-        if (queryResult.exists && queryResult.event.pressed) {
-            printChar(queryResult.event.code);
+        if (queryResult.exists && queryResult.event.pressed && queryResult.event.code >= 'a' && queryResult.event.code <= 'z') {
+            if (queryResult.event.metaMask & META_SHIFT) {
+                printChar(queryResult.event.code - 32);
+            }
+            else {
+                printChar(queryResult.event.code);
+            }
         }
     }
 }

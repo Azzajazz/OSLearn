@@ -3,10 +3,21 @@
 
 #include "inttypes.h"
 
-#define KEY_CODE_COUNT 99
-//@TODO: Support multimedia and ACPI keys
 typedef enum {
-    // ASCII codes (designed to line up with their ascii equivalents)
+    // ASCII key codes
+    // These are designed to have the values of their ASCII counterparts
+    KEY_CODE_BACKTICK = '`',
+    KEY_CODE_MINUS = '-',
+    KEY_CODE_EQUALS = '=',
+    KEY_CODE_BACKSLASH = '\\',
+    KEY_CODE_LEFTBRACKET = '[',
+    KEY_CODE_RIGHTBRACKET = ']',
+    KEY_CODE_SEMICOLON = ';',
+    KEY_CODE_QUOTE = '\'',
+    KEY_CODE_COMMA = ',',
+    KEY_CODE_PERIOD = '.',
+    KEY_CODE_FORWARDSLASH = '/',
+    KEY_CODE_SPACE = ' ',
     KEY_CODE_1 = '1',
     KEY_CODE_2 = '2',
     KEY_CODE_3 = '3',
@@ -43,21 +54,9 @@ typedef enum {
     KEY_CODE_X = 'x',
     KEY_CODE_Y = 'y',
     KEY_CODE_Z = 'z',
-    KEY_CODE_BACKTICK = '`',
-    KEY_CODE_MINUS = '-',
-    KEY_CODE_EQUALS = '=',
-    KEY_CODE_BACKSLASH = '\\',
-    KEY_CODE_LEFTBRACKET = '[',
-    KEY_CODE_RIGHTBRACKET = ']',
-    KEY_CODE_SEMICOLON = ';',
-    KEY_CODE_QUOTE = '\'',
-    KEY_CODE_COMMA = ',',
-    KEY_CODE_PERIOD = '.',
-    KEY_CODE_FORWARDSLASH = '/',
-    KEY_CODE_SPACE = ' ',
 
     // Function keys
-    KEY_CODE_F1,
+    KEY_CODE_F1 = KEY_CODE_Z + 1,
     KEY_CODE_F2,
     KEY_CODE_F3,
     KEY_CODE_F4,
@@ -70,7 +69,7 @@ typedef enum {
     KEY_CODE_F11,
     KEY_CODE_F12,
 
-    // Numpad keys
+    //Numpad keys
     KEY_CODE_NUM1,
     KEY_CODE_NUM2,
     KEY_CODE_NUM3,
@@ -81,8 +80,8 @@ typedef enum {
     KEY_CODE_NUM8,
     KEY_CODE_NUM9,
     KEY_CODE_NUM0,
-    KEY_CODE_NUMSLASH,
     KEY_CODE_NUMSTAR,
+    KEY_CODE_NUMSLASH,
     KEY_CODE_NUMMINUS,
     KEY_CODE_NUMPLUS,
     KEY_CODE_NUMPERIOD,
@@ -95,39 +94,78 @@ typedef enum {
     KEY_CODE_RIGHTALT,
     KEY_CODE_LEFTSHIFT,
     KEY_CODE_RIGHTSHIFT,
-    
+
     // Special keys
     KEY_CODE_ESC,
     KEY_CODE_ENTER,
     KEY_CODE_TAB,
     KEY_CODE_BACKSPACE,
-    KEY_CODE_DELETE,
     KEY_CODE_HOME,
     KEY_CODE_END,
     KEY_CODE_INSERT,
+    KEY_CODE_DELETE,
     KEY_CODE_PAGEUP,
     KEY_CODE_PAGEDOWN,
-
-    // Keyboard lock keys
     KEY_CODE_SCROLLLOCK,
     KEY_CODE_NUMLOCK,
     KEY_CODE_CAPSLOCK,
-    
+
     // Cursor keys
     KEY_CODE_CURSORUP,
-    KEY_CODE_CURSORDOWN,
     KEY_CODE_CURSORLEFT,
     KEY_CODE_CURSORRIGHT,
+    KEY_CODE_CURSORDOWN,
+
+    // Multimedia keys
+    KEY_CODE_PREVTRACK,
+    KEY_CODE_NEXTTRACK,
+    KEY_CODE_PLAY,
+    KEY_CODE_STOP,
+    KEY_CODE_MUTE,
+    KEY_CODE_VOLUMEUP,
+    KEY_CODE_VOLUMEDOWN,
+    KEY_CODE_MEDIASELECT,
+    KEY_CODE_LEFTGUI,
+    KEY_CODE_RIGHTGUI,
+    KEY_CODE_APPS,
+    KEY_CODE_CALC,
+    KEY_CODE_MYCOMPUTER,
+    KEY_CODE_EMAIL,
+
+    // Web keys
+    KEY_CODE_WWWHOME,
+    KEY_CODE_WWWSEARCH,
+    KEY_CODE_WWWFAVOURITES,
+    KEY_CODE_WWWREFRESH,
+    KEY_CODE_WWWFORWARD,
+    KEY_CODE_WWWBACK,
+    KEY_CODE_WWWSTOP,
+
+    // ACPI keys
+    KEY_CODE_POWER,
+    KEY_CODE_SLEEP,
+    KEY_CODE_WAKE,
 } key_code;
 
 typedef struct {
     bool32 pressed;
     key_code code;
+    uint8 metaMask;
 } key_event;
 
 typedef struct {
     bool32 exists;
     key_event event;
 } key_query_result;
+
+#define META_LEFT_SHIFT 0x01
+#define META_RIGHT_SHIFT 0x02
+#define META_SHIFT (META_LEFT_SHIFT | META_RIGHT_SHIFT)
+#define META_LEFT_CTRL 0x04
+#define META_RIGHT_CTRL 0x08
+#define META_CTRL (META_LEFT_CTRL | META-RIGHT_CTRL)
+#define META_LEFT_ALT 0x10
+#define META_RIGHT_ALT 0x20
+#define META_ALT (META_LEFT_ALT | META-RIGHT_ALT)
 
 #endif

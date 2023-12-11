@@ -3,22 +3,40 @@
 #include "inttypes.h"
 #include "string.h"
 
-#define global static
+global volatile uint16* vgaBuffer = (uint16*)0xB8000;
+global uint32 vgaIndex;
+global uint32 vgaBufferHeight = 25;
+global uint32 vgaBufferWidth = 80;
 
-global volatile uint16* VgaBuffer = (uint16*)0xB8000;
-global uint32 VgaIndex;
-global uint32 VgaBufferHeight = 25;
-global uint32 VgaBufferWidth = 80;
+void vgaScrollScreen() {
+    // Scroll the screen
+    for (uint32 scrollIndex = vgaBufferWidth; scrollIndex < vgaBufferWidth * vgaBufferHeight; ++scrollIndex) {
+        vgaBuffer[scrollIndex - vgaBufferWidth] = vgaBuffer[scrollIndex];
+    }
+    // Clear the last line
+    for (uint32 clearIndex = vgaBufferWidth * (vgaBufferHeight - 1); clearIndex < vgaBufferWidth * vgaBufferHeight; ++clearIndex) {
+        vgaBuffer[clearIndex] = 0;
+    }
+}
 
 void printChar(char c) {
     if (c == '\r') {
-        VgaIndex -= VgaIndex % VgaBufferWidth;
+        vgaIndex -= vgaIndex % vgaBufferWidth;
     }
     else if (c == '\n') {
-        VgaIndex += VgaBufferWidth;
+        if (vgaIndex < vgaBufferWidth * (vgaBufferHeight - 1)) {
+            vgaIndex += vgaBufferWidth;
+        }
+        else {
+            vgaScrollScreen();
+        }
     }
     else {
-        VgaBuffer[VgaIndex++] = (0xF << 8) | c;
+        if (vgaIndex == vgaBufferWidth * vgaBufferHeight) {
+            vgaScrollScreen();
+            vgaIndex = vgaBufferWidth * (vgaBufferHeight - 1);
+        }
+        vgaBuffer[vgaIndex++] = (0xf << 8) | c; 
     }
 }
 
