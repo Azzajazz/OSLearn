@@ -61,6 +61,12 @@ pmode:
     mov dword [BOOT_INFO_ADDR + 8], PAGE_TABLES_VIRT_ADDR
     mov dword [BOOT_INFO_ADDR + 12], KERNEL_DATA_VIRT_ADDR
 
+    ;Clear page directory to 0
+    mov ecx, PAGE_DIR_ENTRY_COUNT
+    xor eax, eax
+    mov edi, PAGE_DIR_ADDR
+    rep stosd
+
     ;Set up paging for low 1MiB
     xor eax, eax
     xor ebx, ebx
@@ -314,8 +320,9 @@ write_idt_entry:
     pop esi
     ret 
 
+;@TODO: Performance
 ;%Function
-;Maps the physical memory to the given virtual memory. Pages for the memory mapping are contiguously allocated.
+;Maps the physical memory to the given virtual memory.
 ;All parameters must be multiples of 0x1000.
 ;Parameters:
 ;  eax: Physical memory start
@@ -326,80 +333,71 @@ write_idt_entry:
 map_memory:
     bits 32
 
+    test ecx, ecx
+    je .done
+    sub ecx, 0x1000
+    push eax
+    push ebx
+    push ecx
+    call map_page
+    pop ecx
+    pop ebx
+    pop eax
+    add eax, 0x1000
+    add ebx, 0x1000
+    jmp map_memory
+
+.done:
+    ret
+    
+
+;%Function
+;Map a single page to virtual memory
+;Parameters:
+;  eax: physical memory address
+;  ebx: virtual memory address
+map_page:
+    bits 32
+
     push edi
     push esi
 
     ;bits 22-31 are the page directory index
-    mov esi, ebx
-    shr esi, 22
-    shl esi, 2
-    ;bits 12-21 are the page table index
     mov edi, ebx
-    shr edi, 12
-    and edi, 0x3FF
+    shr edi, 22
+    ;Offset this into the page directory
     shl edi, 2
-    ;Also offset into the correct page table
-    mov edx, esi
-    shl edx, 10
-    add edi, edx
-    add edi, PAGE_TABLES_ADDR
-    add esi, PAGE_DIR_ADDR
+    add edi, PAGE_DIR_ADDR
+
+    mov edx, [ds:edi]
+    ;If the page directory entry is 0, then there is no pre-existing page table here. We need to create a new one
+    test edx, edx
+    je .need_new_table
+    ;Otherwise, we just use the existing one
+    and edx, 0xfffff000
+    jmp .fill_page
+
+.need_new_table:
+    mov edx, dword [next_free_page_table_addr]
+    add dword [next_free_page_table_addr], 0x1000
+    ;Make sure the page directory entry points to this address also
+    mov [ds:edi], edx
+    or dword [ds:edi], 0x3
+.fill_page:
+    ;bits 12-21 are the page table index
+    mov esi, ebx
+    shr esi, 12
+    and esi, 0x3FF
+    ;Offset this into the page table
+    shl esi, 2
+    add esi, edx
+
+    or eax, 0x3
+    mov [ds:esi], eax
     
-    ;The number of page table entries is ecx / 4096
-    mov edx, ecx
-    shr edx, 12
-    push edx
-    push edi
-.fill_table:
-    test edx, edx
-    je .fill_done
-    dec edx
-    mov dword [ds:edi], eax
-    or dword [ds:edi], 3
-    add edi, 4    
-    add eax, 0x1000
-    jmp .fill_table
-.fill_done:
-    pop edi
-    ;The number of page directory entries is ceil(# table entries / 1024)
-    pop edx
-    add edx, 1023
-    shr edx, 10
-.fill_directory:
-    test edx, edx
-    je .done
-    dec edx
-    mov dword [ds:esi], edi
-    or dword [ds:esi], 3
-    add esi, 4
-    add edi, (1024 * 4)
-    jmp .fill_directory
 .done:
     pop esi
     pop edi
-    ret
-
-;%Function
-;Fills a page table entry to point to contiguous physical memory
-;Parameters:
-;  eax: number of entries
-;  ebx: page table address
-;Returns:
-;  None
-fill_page_table:
-    bits 32
-
-    xor ecx, ecx
-.loop:
-    test eax, eax
-    je fill_done 
-    dec eax
-    mov dword [ds:ebx], ecx ;Page block starts at relative address 0, read-write and present
-    or dword [ds:ebx], 3
-    add ebx, 4
-    add ecx, 0x1000
-    jmp .loop
-fill_done:
     ret
 
 %include "input_output.asm"
@@ -416,12 +414,14 @@ default_interrupt_handler:
     nop
     jmp default_interrupt_handler
 
+section .data
 gdtr:
-dw (GDT_SIZE - 1)
-dd GDT_ADDR
+    dw (GDT_SIZE - 1)
+    dd GDT_ADDR
 idtr:
-dw (IDT_SIZE - 1)
-dd IDT_ADDR
+    dw (IDT_SIZE - 1)
+    dd IDT_ADDR
+next_free_page_table_addr: dd PAGE_TABLES_ADDR
 stage2_entry_message: db "Executing stage2.bin", CR, LF, 0
 kernel_load_message: db "Loading kernel.bin...  ", 0
 protected_mode_message: db "Entering protected mode...  ", 0

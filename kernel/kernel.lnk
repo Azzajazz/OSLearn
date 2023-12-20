@@ -1,7 +1,7 @@
 ENTRY(start)
 
-/*phys = 0x100000;*/
 virt = 0xC0000000;
+phys = 0x100000;
 
 SECTIONS {
     . = virt;
@@ -12,9 +12,10 @@ SECTIONS {
     .data : {
         *(.data)
     }
-    __bss_start = .;
     .bss : {
+        __bss_start = .;
         *(.bss)
+        __bss_finish = .;
+        __kernel_finish = . + phys - virt;
     }
-    __bss_finish = .;
 }
