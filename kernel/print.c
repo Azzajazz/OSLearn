@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "inttypes.h"
+#include "types.h"
 #include "string.h"
 
 global volatile uint16* vgaBuffer = (uint16*)0xB8000;
@@ -24,6 +24,7 @@ void printChar(char c) {
         vgaIndex -= vgaIndex % vgaBufferWidth;
     }
     else if (c == '\n') {
+        vgaIndex -= vgaIndex % vgaBufferWidth;
         if (vgaIndex < vgaBufferWidth * (vgaBufferHeight - 1)) {
             vgaIndex += vgaBufferWidth;
         }
@@ -42,12 +43,12 @@ void printChar(char c) {
 
 void svPrint(string_view sv) {
     uint16 charIndex;
-    for (charIndex = 0; charIndex < sv.size; ++charIndex) {
+    for (charIndex = 0; charIndex < sv.length; ++charIndex) {
         printChar(sv.data[charIndex]);
     }
 }
 
-void stringPrint(char* cstr) {
+void printString(char* cstr) {
     for (; *cstr; cstr++) {
         printChar(*cstr);
     }
@@ -133,7 +134,7 @@ void printFmt(char* format, ...) {
                         svPrint(va_arg(args, string_view));
                     }
                     else {
-                        stringPrint(va_arg(args, char*));
+                        printString(va_arg(args, char*));
                     }
                 } break;
                 case 'i': {

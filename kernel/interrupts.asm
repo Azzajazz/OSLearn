@@ -4,7 +4,7 @@ global _testHandler
 global _pitHandler
 global _keyboardHandler
 
-extern _stringPrint
+extern _printString
 extern _printFmt
 extern _keyboardInterrupt
 
@@ -29,7 +29,7 @@ section .text
 ;A simple test handler.
 _testHandler:
     push test_message
-    call _stringPrint
+    call _printString
     add esp, 4
     iret
 
@@ -93,6 +93,6 @@ pic_read_isr:
     ret
     
 section .data
-test_message: db "This is a test exception call!", CR, LF, 0
-format_string_x32: db "%x32", CR, LF, 0
-format_string_x8: db "%x8", CR, LF, 0
+test_message: db "This is a test exception call!", LF, 0
+format_string_x32: db "%x32", LF, 0
+format_string_x8: db "%x8", LF, 0

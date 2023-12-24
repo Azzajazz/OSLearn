@@ -1,7 +1,7 @@
 #ifndef KEYBOARD_H_
 #define KEYBOARD_H_
 
-#include "inttypes.h"
+#include "types.h"
 
 typedef enum {
     // ASCII key codes
@@ -153,10 +153,7 @@ typedef struct {
     uint8 metaMask;
 } key_event;
 
-typedef struct {
-    bool32 exists;
-    key_event event;
-} key_query_result;
+OPTIONAL_DEF(key_event);
 
 #define META_LEFT_SHIFT 0x01
 #define META_RIGHT_SHIFT 0x02

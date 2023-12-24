@@ -1,5 +1,5 @@
 #include "x86.h"
-#include "inttypes.h"
+#include "types.h"
 
 #define PS2_DATA 0x60
 #define PS2_COMMAND 0x64

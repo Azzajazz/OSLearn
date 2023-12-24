@@ -1,4 +1,4 @@
-#include "inttypes.h"
+#include "types.h"
 #include "keyboard.h"
 
 #define KEY_EVENT_QUEUE_LENGTH 5
@@ -285,11 +285,11 @@ void keyboardInterrupt(uint8 scanCode) {
     }
 }
 
-key_query_result queryKeyEvent(void) {
-    key_query_result result;
+OPTIONAL(key_event) queryKeyEvent(void) {
+    OPTIONAL(key_event) result;
     if (keyEventQueue.head != keyEventQueue.tail) {
         result.exists = true;
-        result.event = keyEventQueue.queue[keyEventQueue.head++];
+        result.inner = keyEventQueue.queue[keyEventQueue.head++];
         if (keyEventQueue.head >= KEY_EVENT_QUEUE_LENGTH) {
             keyEventQueue.head = 0;
         }

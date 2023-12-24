@@ -1,7 +1,7 @@
 #ifndef X86_H_
 #define X86_H_
 
-#include "inttypes.h"
+#include "types.h"
 
 #define x86Interrupt(code) asm volatile ("int $"#code)
 
