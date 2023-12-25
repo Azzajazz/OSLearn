@@ -5,3 +5,4 @@ tools/frhed
 tools/qemu
 tools/NASM
 tools/bochs-2.7
+*.swp
