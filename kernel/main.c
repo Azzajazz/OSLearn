@@ -145,7 +145,86 @@ void setInterrupt(boot_info* info, uint8 idtIndex, interruptHandler handler) {
     info->idtAddress[idtIndex].offsetHigh = (uint16)(offset >> 16);
 }
 
-void getLineSized(char* buffer, uint32 size) {
+void printKeyPress(key_event event) {
+    if (event.code == ' ') {
+        printChar(' ');
+    }
+    else if (event.metaMask & META_SHIFT) {
+        printChar((char)event.code + 32);
+    }
+    else {
+        if (event.code >= 'a' && event.code <= 'z') {
+            printChar((char)event.code);
+        }
+        else {
+            switch (event.code) {
+                case '1': {
+                    printChar('!');
+                } break;
+                case '2': {
+                    printChar('@');
+                } break;
+                case '3': {
+                    printChar('#');
+                } break;
+                case '4': {
+                    printChar('$');
+                } break;
+                case '5': {
+                    printChar('%');
+                } break;
+                case '6': {
+                    printChar('^');
+                } break;
+                case '7': {
+                    printChar('&');
+                } break;
+                case '8': {
+                    printChar('*');
+                } break;
+                case '9': {
+                    printChar('(');
+                } break;
+                case '0': {
+                    printChar(')');
+                } break;
+                case '-': {
+                    printChar('_');
+                } break;
+                case '=': {
+                    printChar('+');
+                } break;
+                case '\\': {
+                    printChar('|');
+                } break;
+                case '[': {
+                    printChar('{');
+                } break;
+                case ']': {
+                    printChar('}');
+                } break;
+                case ';': {
+                    printChar(':');
+                } break;
+                case '\'': {
+                    printChar('"');
+                } break;
+                case ',': {
+                    printChar('<');
+                } break;
+                case '.': {
+                    printChar('>');
+                } break;
+                case '/': {
+                    printChar('?');
+                } break;
+                default: break;
+            }
+        }
+    }
+}
+
+void getLineSized(char* buffer, uint32 size, bool32 printStrokes) {
     uint32 charCount = 0;
     while (charCount < size) {
         OPTIONAL(key_event) event = queryKeyEvent();
@@ -157,6 +236,9 @@ void getLineSized(char* buffer, uint32 size) {
                 break;
             }
             buffer[charCount++] = event.inner.code;
+            if (printStrokes) {
+                printKeyPress(event.inner);
+            }
         }
     }
     if (charCount < size) {
@@ -170,10 +252,11 @@ void getLineSized(char* buffer, uint32 size) {
 //@TODO: Automatic echoing of key presses
 void kernelRepl() {
     char input[128]; //@TODO: We have no dynamic allocator yet, and maybe we don't want one (potential failure point)
+    bool32 printStrokes = true;
     while (true) {
         printFmt("> ");
-        getLineSized(input, 128);
-        printString(input);
+        getLineSized(input, 128, printStrokes);
+        printChar('\n');
         OPTIONAL(string_split) split_result = stringSplitOn(input, ' ');
         if (split_result.exists) {
             string_view command = split_result.inner.first;
