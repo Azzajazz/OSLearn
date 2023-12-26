@@ -249,7 +249,6 @@ void getLineSized(char* buffer, uint32 size, bool32 printStrokes) {
     }
 }
 
-//@TODO: Automatic echoing of key presses
 void kernelRepl() {
     char input[128]; //@TODO: We have no dynamic allocator yet, and maybe we don't want one (potential failure point)
     bool32 printStrokes = true;
@@ -297,4 +296,6 @@ void kernelMain(boot_info* info) {
 //    }
 
     kernelRepl();
+
+    for(;;);
 }
