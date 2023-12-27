@@ -150,11 +150,8 @@ void printKeyPress(key_event event) {
         printChar(' ');
     }
     else if (event.metaMask & META_SHIFT) {
-        printChar((char)event.code + 32);
-    }
-    else {
         if (event.code >= 'a' && event.code <= 'z') {
-            printChar((char)event.code);
+            printChar((char)event.code - 32);
         }
         else {
             switch (event.code) {
@@ -222,6 +219,9 @@ void printKeyPress(key_event event) {
             }
         }
     }
+    else {
+        printChar((char)event.code);
+    }
 }
 
 void getLineSized(char* buffer, uint32 size, bool32 printStrokes) {
@@ -231,7 +231,7 @@ void getLineSized(char* buffer, uint32 size, bool32 printStrokes) {
         while (!event.exists) {
             event = queryKeyEvent();
         }
-        if (event.inner.pressed) {
+        if (event.inner.pressed && !isMeta(event.inner.code)) {
             if (event.inner.code == KEY_CODE_ENTER) {
                 break;
             }
@@ -267,7 +267,6 @@ void kernelRepl() {
 }
 
 void kernelMain(boot_info* info) {
-    memoryInit();
     printString("Now in protected mode!\n");
     printString("Executing kernel.\n");
     printString("Boot info:\n");
@@ -276,9 +275,19 @@ void kernelMain(boot_info* info) {
     printFmt("  Page tables address: %p\n", info->pageTablesAddress);
     printFmt("  Kernel data address: %p\n", info->kernelDataAddress);
 
+    memoryInit();
+    vgaInit();
+
+    uint8 registerValue = vgaReadCrtRegister(CRTC_CURSOR_START);
+    printFmt("Before: %x8\n", registerValue);
+    vgaWriteCrtRegister(CRTC_CURSOR_START, 0x01, 0x1F);
+    registerValue = vgaReadCrtRegister(CRTC_CURSOR_START);
+    printFmt("After: %x8\n", registerValue);
+
     setInterrupt(info, 0x42, &testHandler);
     setInterrupt(info, 0x20, &pitHandler);
     setInterrupt(info, 0x21, &keyboardHandler);
+    x86InterruptEnable();
 
     x86Interrupt(0x42);
 

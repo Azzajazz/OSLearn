@@ -212,6 +212,7 @@ void keyboardInterrupt(uint8 scanCode) {
     key_code keyCode;
     if (doubleCode) {
         keyCode = keyCodeMapping[scanCode - 0x10 + 85];
+        doubleCode = false;
     }
     else {
         keyCode = keyCodeMapping[scanCode - 1];
@@ -298,4 +299,8 @@ OPTIONAL(key_event) queryKeyEvent(void) {
         result.exists = false;
     }
     return result;
+}
+
+bool32 isMeta(key_code code) {
+    return (code >= KEY_CODE_LEFTCTRL) && (code <= KEY_CODE_RIGHTSHIFT);
 }

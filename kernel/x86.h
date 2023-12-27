@@ -4,8 +4,9 @@
 #include "types.h"
 
 #define x86Interrupt(code) asm volatile ("int $"#code)
+#define x86InterruptEnable() asm volatile ("sti")
 
-// Port IO functions
+/* Port IO functions */
 extern void __attribute__((fastcall)) x86Out8(uint16 port, uint8 message);
 extern void __attribute__((fastcall)) x86Out16(uint16 port, uint16 message);
 extern void __attribute__((fastcall)) x86Out32(uint16 port, uint32 message);
@@ -16,9 +17,27 @@ extern uint32 __attribute__((fastcall)) x86In32(uint16 port);
 
 extern void __attribute__((fastcall)) x86IoWait(void);
 
-// PS/2 controller functions
-extern void __attribute__((fastcall)) ps2WaitForReadable(void);
-extern void __attribute__((fastcall)) ps2WaitForWriteable(void);
-extern void __attribute__((fastcall)) ps2SendEcho(void);
+/* PS/2 controller functions */
+void ps2WaitForReadable(void);
+void ps2WaitForWriteable(void);
+void ps2SendEcho(void);
+
+/* VGA stuff */
+// Register indexes
+#define CRTC_MAX_SCAN_LINE 0x09
+#define CRTC_CURSOR_START 0x0A
+#define CRTC_CURSOR_END 0x0B
+#define CRTC_CURSOR_LOC_HIGH 0x0E
+#define CRTC_CURSOR_LOC_LOW 0x0F 
+
+// Register contents
+#define CURSOR_DISABLE 0x20
+
+void vgaInit();
+void vgaWriteCrtRegister(uint8 address, uint8 data, uint8 mask);
+uint8 vgaReadCrtRegister(uint8 address);
+void vgaSetCursorLocation(uint16 location);
+uint16 vgaGetCursorLocation();
+
 
 #endif

@@ -93,7 +93,6 @@ pmode:
     call initialize_pic
     call write_idt
     lidt [idtr]
-    sti
 
     ;Jump to kernel code
     mov eax, KERNEL_VIRT_ADDR

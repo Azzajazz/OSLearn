@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "string.h"
+#include "x86.h"
 
 global volatile uint16* vgaBuffer = (uint16*)0xB8000;
 global uint32 vgaIndex;
@@ -39,6 +40,7 @@ void printChar(char c) {
         }
         vgaBuffer[vgaIndex++] = (0xf << 8) | c; 
     }
+    vgaSetCursorLocation(vgaIndex);
 }
 
 void svPrint(string_view sv) {
