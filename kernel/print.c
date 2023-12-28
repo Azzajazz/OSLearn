@@ -64,7 +64,7 @@ void uint64Print(uint64 integer) {
         return;
     }
     while (integer > 0) {
-        digits[digitCount++] = '0' + (uint8)integer % 10;
+        digits[digitCount++] = '0' + (uint8)(integer % 10);
         integer = integer / 10;
     }
     for (uint16 digitIndex = digitCount; digitIndex > 0; --digitIndex) {
@@ -78,6 +78,44 @@ void int64Print(int64 integer) {
         integer = -integer;
     }
     uint64Print((uint64)integer);
+}
+
+void uint8PrintHex(uint8 integer) {
+    printChar('0');
+    printChar('x');
+    char digits[2]; //uint8 has 2 digits when printed in hex
+    for (uint32 digitIndex = 0; digitIndex < 2; ++digitIndex) {
+        uint8 digit = integer & 0xF;
+        if (digit < 10) {
+            digits[digitIndex] = digit + '0';
+        }
+        else {
+            digits[digitIndex] = digit - 10 + 'A';
+        }
+        integer >>= 4;
+    }
+    for (uint32 digitIndex = 2; digitIndex > 0; --digitIndex) {
+        printChar(digits[digitIndex - 1]);
+    }
+}
+
+void uint16PrintHex(uint16 integer) {
+    printChar('0');
+    printChar('x');
+    char digits[4]; //uint16 has 4 digits when printed in hex
+    for (uint32 digitIndex = 0; digitIndex < 4; ++digitIndex) {
+        uint8 digit = integer & 0xF;
+        if (digit < 10) {
+            digits[digitIndex] = digit + '0';
+        }
+        else {
+            digits[digitIndex] = digit - 10 + 'A';
+        }
+        integer >>= 4;
+    }
+    for (uint32 digitIndex = 4; digitIndex > 0; --digitIndex) {
+        printChar(digits[digitIndex - 1]);
+    }
 }
 
 //@TODO: Fold uintxxPrintHex functions together, maybe using a macro
@@ -96,25 +134,6 @@ void uint32PrintHex(uint32 integer) {
         integer >>= 4;
     }
     for (uint32 digitIndex = 8; digitIndex > 0; --digitIndex) {
-        printChar(digits[digitIndex - 1]);
-    }
-}
-
-void uint8PrintHex(uint8 integer) {
-    printChar('0');
-    printChar('x');
-    char digits[2]; //uint32 has 8 digits when printed in hex
-    for (uint32 digitIndex = 0; digitIndex < 2; ++digitIndex) {
-        uint8 digit = integer & 0xF;
-        if (digit < 10) {
-            digits[digitIndex] = digit + '0';
-        }
-        else {
-            digits[digitIndex] = digit - 10 + 'A';
-        }
-        integer >>= 4;
-    }
-    for (uint32 digitIndex = 2; digitIndex > 0; --digitIndex) {
         printChar(digits[digitIndex - 1]);
     }
 }
@@ -179,7 +198,11 @@ void printFmt(char* format, ...) {
                     //@TODO: uint16 and uint64 hex printing
                     if (format[1] == '8') {
                         format++;
-                        uint8PrintHex((uint64)va_arg(args, uint32));
+                        uint8PrintHex((uint8)va_arg(args, uint32));
+                    }
+                    else if (format[1] == '1' && format[2] == '6') {
+                        format += 2;
+                        uint16PrintHex((uint16)va_arg(args, uint32));
                     }
                     else if (format[1] == '3' && format[2] == '2') {
                         format += 2;
