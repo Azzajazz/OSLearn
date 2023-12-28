@@ -267,6 +267,11 @@ void kernelRepl() {
 }
 
 void kernelMain(boot_info* info) {
+    // vgaInit();
+    memoryInit();
+    vgaEnableCursor();
+    vgaSetCursorLocation(0);
+
     printString("Now in protected mode!\n");
     printString("Executing kernel.\n");
     printString("Boot info:\n");
@@ -274,15 +279,6 @@ void kernelMain(boot_info* info) {
     printFmt("  Page dir address:    %p\n", info->pageDirectoryAddress);
     printFmt("  Page tables address: %p\n", info->pageTablesAddress);
     printFmt("  Kernel data address: %p\n", info->kernelDataAddress);
-
-    memoryInit();
-    vgaInit();
-
-    uint8 registerValue = vgaReadCrtRegister(CRTC_CURSOR_START);
-    printFmt("Before: %x8\n", registerValue);
-    vgaWriteCrtRegister(CRTC_CURSOR_START, 0x01, 0x1F);
-    registerValue = vgaReadCrtRegister(CRTC_CURSOR_START);
-    printFmt("After: %x8\n", registerValue);
 
     setInterrupt(info, 0x42, &testHandler);
     setInterrupt(info, 0x20, &pitHandler);
