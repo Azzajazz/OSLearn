@@ -1,6 +1,9 @@
 bits 32
 
 ;@TODO: These could all be inlined
+global @x86InterruptEnable@0
+global @x86InterruptDisable@0
+
 global @x86Out8@8
 global @x86Out16@8
 global @x86Out32@8
@@ -17,6 +20,26 @@ global @read_isr@0
 
 section .text
 ;%Function
+;A wrapper for the sti x86 instruction
+;Parameters:
+;  None
+;Returns:
+;  None
+@x86InterruptEnable@0:
+    sti
+    ret
+
+;%Function
+;A wrapper for the cli x86 instruction
+;Parameters:
+;  None
+;Returns:
+;  None
+@x86InterruptDisable@0:
+    cli
+    ret
+
+;%Function
 ;A wrapper for the 8-bit x86 out instruction
 ;Parameters:
 ;  ecx: Port number
@@ -24,7 +47,7 @@ section .text
 ;Returns:
 ;  None
 @x86Out8@8:
-    mov al, cl
+    mov al, dl
     mov dx, cx
     out dx, al
     ret
@@ -37,7 +60,7 @@ section .text
 ;Returns:
 ;  None
 @x86Out16@8:
-    mov ax, cx
+    mov ax, dx
     mov dx, cx
     out dx, ax
     ret
@@ -50,7 +73,7 @@ section .text
 ;Returns:
 ;  None
 @x86Out32@8:
-    mov eax, ecx
+    mov eax, edx
     mov dx, cx
     out dx, eax
     ret

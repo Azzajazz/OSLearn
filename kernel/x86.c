@@ -33,14 +33,22 @@ void ps2SendEcho() {
 #define VGA_CRTC_DATA_PORT 0x3D5
 
 void vgaInit() {
-    uint8 morValue = x86In8(VGA_MOR_READ);
-    morValue |= 1;
-    x86Out8(VGA_MOR_WRITE, morValue);
-    x86IoWait();
+    vgaWriteMor(
     vgaWriteCrtRegister(CRTC_CURSOR_START, 0, 0x3F);
     x86IoWait();
     uint8 maximumScanLine = vgaReadCrtRegister(CRTC_MAX_SCAN_LINE) & 0x1F;
     vgaWriteCrtRegister(CRTC_CURSOR_END, maximumScanLine, 0x1F);
+    x86IoWait();
+}
+
+uint8 vgaReadMor() {
+    return x86In8(VGA_MOR_READ);
+}
+
+void vgaWriteMor(uint8 data, uint8 mask) {
+    uint8 oldData = vgaReadMor();
+    uint8 newData = (data & mask) | (oldData & ~mask);
+    x86Out8(VGA_MOR_WRITE, newData);
     x86IoWait();
 }
 
@@ -49,7 +57,8 @@ void vgaWriteCrtRegister(uint8 address, uint8 data, uint8 mask) {
     x86Out8(VGA_CRTC_ADDRESS_PORT, address);
     x86IoWait();
     uint8 oldData = x86In8(VGA_CRTC_DATA_PORT);
-    x86Out8(VGA_CRTC_DATA_PORT, data & (oldData | mask));
+    uint8 newData = (data & mask) | (oldData & ~mask);
+    x86Out8(VGA_CRTC_DATA_PORT, newData);
     x86IoWait();
     x86Out8(VGA_CRTC_ADDRESS_PORT, oldAddress);
     x86IoWait();
@@ -65,8 +74,18 @@ uint8 vgaReadCrtRegister(uint8 address) {
     return data;
 }
 
+void vgaEnableCursor() {
+    vgaWriteCrtRegister(CRTC_CURSOR_START, 0, CURSOR_DISABLE);
+    uint8 maximumScanLine = vgaReadCrtRegister(CRTC_MAX_SCAN_LINE) & 0x1F;
+    vgaWriteCrtRegister(CRTC_CURSOR_END, maximumScanLine, 0x1F);
+}
+
+void vgaDisableCursor() {
+    vgaWriteCrtRegister(CRTC_CURSOR_START, CURSOR_DISABLE, CURSOR_DISABLE);
+}
+
 void vgaSetCursorLocation(uint16 location) {
-    uint8 locationHigh = location >> 8;
+    uint8 locationHigh = (uint8)(location >> 8);
     uint8 locationLow = (uint8)location;
     vgaWriteCrtRegister(CRTC_CURSOR_LOC_HIGH, locationHigh, 0xFF);
     x86IoWait();

@@ -4,18 +4,21 @@
 #include "types.h"
 
 #define x86Interrupt(code) asm volatile ("int $"#code)
-#define x86InterruptEnable() asm volatile ("sti")
+
+/* Interrupt enabling and disabling */
+void __attribute__((fastcall)) x86InterruptEnable(void);
+void __attribute__((fastcall)) x86InterruptDisable(void);
 
 /* Port IO functions */
-extern void __attribute__((fastcall)) x86Out8(uint16 port, uint8 message);
-extern void __attribute__((fastcall)) x86Out16(uint16 port, uint16 message);
-extern void __attribute__((fastcall)) x86Out32(uint16 port, uint32 message);
+void __attribute__((fastcall)) x86Out8(uint16 port, uint8 message);
+void __attribute__((fastcall)) x86Out16(uint16 port, uint16 message);
+void __attribute__((fastcall)) x86Out32(uint16 port, uint32 message);
 
-extern uint8 __attribute__((fastcall)) x86In8(uint16 port);
-extern uint16 __attribute__((fastcall)) x86In16(uint16 port);
-extern uint32 __attribute__((fastcall)) x86In32(uint16 port);
+uint8 __attribute__((fastcall)) x86In8(uint16 port);
+uint16 __attribute__((fastcall)) x86In16(uint16 port);
+uint32 __attribute__((fastcall)) x86In32(uint16 port);
 
-extern void __attribute__((fastcall)) x86IoWait(void);
+void __attribute__((fastcall)) x86IoWait(void);
 
 /* PS/2 controller functions */
 void ps2WaitForReadable(void);
@@ -34,10 +37,14 @@ void ps2SendEcho(void);
 #define CURSOR_DISABLE 0x20
 
 void vgaInit();
+uint8 vgaReadMor();
+void vgaWriteMor(uint8 data, uint8 mask);
 void vgaWriteCrtRegister(uint8 address, uint8 data, uint8 mask);
 uint8 vgaReadCrtRegister(uint8 address);
 void vgaSetCursorLocation(uint16 location);
 uint16 vgaGetCursorLocation();
+void vgaEnableCursor();
+void vgaDisableCursor();
 
 
 #endif
