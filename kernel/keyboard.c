@@ -301,6 +301,14 @@ OPTIONAL(key_event) queryKeyEvent(void) {
     return result;
 }
 
+key_event getKeyEvent(void) {
+    OPTIONAL(key_event) event = queryKeyEvent();
+    while (!event.exists) {
+        event = queryKeyEvent();
+    }
+    return event.inner;
+}
+
 bool32 isMeta(key_code code) {
     return (code >= KEY_CODE_LEFTCTRL) && (code <= KEY_CODE_RIGHTSHIFT);
 }

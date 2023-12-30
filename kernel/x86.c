@@ -1,6 +1,8 @@
 #include "x86.h"
 #include "types.h"
 
+#define global static
+
 #define PS2_DATA 0x60
 #define PS2_COMMAND 0x64
 
@@ -32,14 +34,10 @@ void ps2SendEcho() {
 #define VGA_CRTC_ADDRESS_PORT 0x3D4
 #define VGA_CRTC_DATA_PORT 0x3D5
 
-void vgaInit() {
-    vgaWriteMor(
-    vgaWriteCrtRegister(CRTC_CURSOR_START, 0, 0x3F);
-    x86IoWait();
-    uint8 maximumScanLine = vgaReadCrtRegister(CRTC_MAX_SCAN_LINE) & 0x1F;
-    vgaWriteCrtRegister(CRTC_CURSOR_END, maximumScanLine, 0x1F);
-    x86IoWait();
-}
+#define VGA_BUFFER_WIDTH 80
+#define VGA_BUFFER_HEIGHT 25
+global volatile uint16* vgaBuffer = (uint16*)0xB8000;
+global uint32 vgaIndex;
 
 uint8 vgaReadMor() {
     return x86In8(VGA_MOR_READ);
@@ -97,4 +95,48 @@ uint16 vgaGetCursorLocation() {
     uint8 locationHigh = vgaReadCrtRegister(CRTC_CURSOR_LOC_HIGH);
     uint8 locationLow = vgaReadCrtRegister(CRTC_CURSOR_LOC_LOW);
     return (locationHigh << 8) | locationLow;
+}
+
+void vgaClearScreen() {
+    for (uint32 bufferIndex = 0; bufferIndex < VGA_BUFFER_WIDTH * VGA_BUFFER_HEIGHT; ++bufferIndex) {
+        vgaBuffer[bufferIndex] &= ~0xFF;
+    }
+    vgaIndex = 0;
+}
+
+void vgaSetWriteLocation(uint32 location) {
+    vgaIndex = location;
+}
+
+uint32 vgaGetWriteLocation() {
+    return vgaIndex;
+}
+
+void vgaScrollScreen() {
+    // Scroll the screen
+    for (uint32 scrollIndex = VGA_BUFFER_WIDTH; scrollIndex < VGA_BUFFER_WIDTH * VGA_BUFFER_HEIGHT; ++scrollIndex) {
+        vgaBuffer[scrollIndex - VGA_BUFFER_WIDTH] = vgaBuffer[scrollIndex];
+    }
+    // Clear the last line
+    for (uint32 clearIndex = VGA_BUFFER_WIDTH * (VGA_BUFFER_HEIGHT - 1); clearIndex < VGA_BUFFER_WIDTH * VGA_BUFFER_HEIGHT; ++clearIndex) {
+        vgaBuffer[clearIndex] = 0;
+    }
+}
+
+uint32 vgaGetBufferWidth() {
+    return VGA_BUFFER_WIDTH;
+}
+
+uint32 vgaGetBufferHeight() {
+    return VGA_BUFFER_HEIGHT;
+}
+
+void vgaWriteChar(char c) {
+    vgaBuffer[vgaIndex] = (0xf << 8) | c; 
+}
+
+void vgaCopyBuffer(uint8* buffer, uint32 length) {
+    for (uint32 bufferIndex = 0; bufferIndex < length; ++bufferIndex) {
+        vgaBuffer[vgaIndex + bufferIndex] = (0xf << 8) | buffer[bufferIndex];
+    }
 }

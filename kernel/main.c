@@ -145,123 +145,118 @@ void setInterrupt(boot_info* info, uint8 idtIndex, interruptHandler handler) {
     info->idtAddress[idtIndex].offsetHigh = (uint16)(offset >> 16);
 }
 
-void printKeyPress(key_event event) {
-    if (event.code == ' ') {
-        printChar(' ');
-    }
-    else if (event.metaMask & META_SHIFT) {
-        if (event.code >= 'a' && event.code <= 'z') {
-            printChar((char)event.code - 32);
-        }
-        else {
-            switch (event.code) {
-                case '1': {
-                    printChar('!');
-                } break;
-                case '2': {
-                    printChar('@');
-                } break;
-                case '3': {
-                    printChar('#');
-                } break;
-                case '4': {
-                    printChar('$');
-                } break;
-                case '5': {
-                    printChar('%');
-                } break;
-                case '6': {
-                    printChar('^');
-                } break;
-                case '7': {
-                    printChar('&');
-                } break;
-                case '8': {
-                    printChar('*');
-                } break;
-                case '9': {
-                    printChar('(');
-                } break;
-                case '0': {
-                    printChar(')');
-                } break;
-                case '-': {
-                    printChar('_');
-                } break;
-                case '=': {
-                    printChar('+');
-                } break;
-                case '\\': {
-                    printChar('|');
-                } break;
-                case '[': {
-                    printChar('{');
-                } break;
-                case ']': {
-                    printChar('}');
-                } break;
-                case ';': {
-                    printChar(':');
-                } break;
-                case '\'': {
-                    printChar('"');
-                } break;
-                case ',': {
-                    printChar('<');
-                } break;
-                case '.': {
-                    printChar('>');
-                } break;
-                case '/': {
-                    printChar('?');
-                } break;
-                default: break;
-            }
-        }
-    }
-    else {
-        printChar((char)event.code);
+void zeroMemory(void* memory, uint32 size) {
+    uint8* memoryBytes = (uint8*)memory;
+    for (uint32 memoryIndex = 0; memoryIndex < size; ++memoryIndex) {
+        memoryBytes[memoryIndex] = 0;
     }
 }
 
-void getLineSized(char* buffer, uint32 size, bool32 printStrokes) {
-    uint32 charCount = 0;
-    while (charCount < size) {
-        OPTIONAL(key_event) event = queryKeyEvent();
-        while (!event.exists) {
-            event = queryKeyEvent();
+char translateKeyPress(key_event event) {
+    if (event.metaMask & META_SHIFT) {
+        if (event.code >= 'a' && event.code <= 'z') {
+            return event.code - 32;
         }
-        if (event.inner.pressed && !isMeta(event.inner.code)) {
-            if (event.inner.code == KEY_CODE_ENTER) {
-                break;
-            }
-            buffer[charCount++] = event.inner.code;
-            if (printStrokes) {
-                printKeyPress(event.inner);
-            }
+        switch (event.code) {
+            case '`': return '~';
+            case '1': return '!';
+            case '2': return '@';
+            case '3': return '#';
+            case '4': return '$';
+            case '5': return '%';
+            case '6': return '^';
+            case '7': return '&';
+            case '8': return '*';
+            case '9': return '(';
+            case '0': return ')';
+            case '-': return '_';
+            case '=': return '+';
+            case '[': return '{';
+            case ']': return '}';
+            case '\\': return '|';
+            case ';': return ':';
+            case '\'': return '"';
+            case ',': return '<';
+            case '.': return '>';
+            case '/': return '?';
+            default: break;
         }
     }
-    if (charCount < size) {
-        buffer[charCount] = '\0';
-    }
-    else {
-        buffer[size - 1] = '\0';
-    }
+    return event.code;
 }
 
 void kernelRepl() {
-    char input[128]; //@TODO: We have no dynamic allocator yet, and maybe we don't want one (potential failure point)
-    bool32 printStrokes = true;
+    vgaClearScreen();
+    vgaEnableCursor();
+    char input[128] = {0};
+    uint32 inputIndex = 0;
+    uint32 inputLength = 0;
+    printString("> ");
     while (true) {
-        printFmt("> ");
-        getLineSized(input, 128, printStrokes);
-        printChar('\n');
-        OPTIONAL(string_split) split_result = stringSplitOn(input, ' ');
-        if (split_result.exists) {
-            string_view command = split_result.inner.first;
-            if (svEqualsCString(command, "echo")) {
-                printFmt("%sv\n", split_result.inner.second);
+        key_event event = getKeyEvent();
+        if (event.pressed && !isMeta(event.code)) {
+            switch (event.code) {
+                case KEY_CODE_ENTER: {
+                    printChar('\n');
+                    printString(input);
+                    printChar('\n');
+                    zeroMemory(input, 128);
+                    inputIndex = 0;
+                    printString("> ");
+                } break;
+                case KEY_CODE_CURSORLEFT: {
+                    if (inputIndex > 0) {
+                        vgaSetCursorLocation(vgaGetCursorLocation() - 1);
+                        inputIndex--;
+                    }
+                } break;
+                case KEY_CODE_CURSORRIGHT: {
+                    if (inputIndex < inputLength) {
+                        vgaSetCursorLocation(vgaGetCursorLocation() + 1);
+                        inputIndex++;
+                    }
+                } break;
+                case KEY_CODE_BACKSPACE: {
+                    if (inputIndex > 0) {
+                        for (uint32 afterInputIndex = inputIndex; afterInputIndex < inputLength; ++afterInputIndex) {
+                            input[afterInputIndex - 1] = input[afterInputIndex];
+                        }
+                        input[inputLength] = 0;
+                        inputIndex--;
+                        inputLength--;
+                        vgaSetCursorLocation(vgaGetCursorLocation() - 1);
+                    }
+                } break;
+                case KEY_CODE_HOME: {
+                    vgaSetCursorLocation(vgaGetCursorLocation() - inputIndex);
+                    inputIndex = 0;
+                } break;
+                case KEY_CODE_END: {
+                    vgaSetCursorLocation(vgaGetCursorLocation() + (inputLength - inputIndex));
+                    inputIndex = inputLength;
+                }
+                case KEY_CODE_DELETE: {
+                    if (inputIndex < inputLength - 1) {
+                        for (uint32 afterInputIndex = inputIndex + 1; afterInputIndex < inputLength; ++afterInputIndex) {
+                            input[afterInputIndex - 1] = input[afterInputIndex];
+                        }
+                        input[inputLength] = 0;
+                        inputLength--;
+                    }
+                } break;
+                default: {
+                    char translated = translateKeyPress(event);
+                    if (inputLength < 128) {
+                        for (uint32 afterInputIndex = inputLength; afterInputIndex > inputIndex; --afterInputIndex) {
+                            input[afterInputIndex] = input[afterInputIndex - 1];
+                        }
+                        inputLength++;
+                        input[inputIndex++] = translated;
+                        vgaSetCursorLocation(vgaGetCursorLocation() + 1);
+                    }
+                } break;
             }
+            vgaCopyBuffer((uint8*)input, 128);
         }
     }
 }

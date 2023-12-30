@@ -4,25 +4,12 @@
 #include "string.h"
 #include "x86.h"
 
-global volatile uint16* vgaBuffer = (uint16*)0xB8000;
-global uint32 vgaIndex;
-global uint32 vgaBufferHeight = 25;
-global uint32 vgaBufferWidth = 80;
-
-void vgaScrollScreen() {
-    // Scroll the screen
-    for (uint32 scrollIndex = vgaBufferWidth; scrollIndex < vgaBufferWidth * vgaBufferHeight; ++scrollIndex) {
-        vgaBuffer[scrollIndex - vgaBufferWidth] = vgaBuffer[scrollIndex];
-    }
-    // Clear the last line
-    for (uint32 clearIndex = vgaBufferWidth * (vgaBufferHeight - 1); clearIndex < vgaBufferWidth * vgaBufferHeight; ++clearIndex) {
-        vgaBuffer[clearIndex] = 0;
-    }
-}
-
 void printChar(char c) {
+    uint32 vgaIndex = vgaGetWriteLocation();
+    uint32 vgaBufferWidth = vgaGetBufferWidth();
+    uint32 vgaBufferHeight = vgaGetBufferHeight();
     if (c == '\r') {
-        vgaIndex -= vgaIndex % vgaBufferWidth;
+        vgaIndex - vgaIndex % vgaBufferWidth;
     }
     else if (c == '\n') {
         vgaIndex -= vgaIndex % vgaBufferWidth;
@@ -38,8 +25,10 @@ void printChar(char c) {
             vgaScrollScreen();
             vgaIndex = vgaBufferWidth * (vgaBufferHeight - 1);
         }
-        vgaBuffer[vgaIndex++] = (0xf << 8) | c; 
+        vgaWriteChar(c);
+        vgaIndex++;
     }
+    vgaSetWriteLocation(vgaIndex);
     vgaSetCursorLocation(vgaIndex);
 }
 

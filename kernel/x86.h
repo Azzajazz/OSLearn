@@ -45,6 +45,13 @@ void vgaSetCursorLocation(uint16 location);
 uint16 vgaGetCursorLocation();
 void vgaEnableCursor();
 void vgaDisableCursor();
-
+void vgaClearScreen();
+void vgaSetWriteLocation(uint32 location);
+uint32 vgaGetWriteLocation();
+uint32 vgaGetBufferWidth();
+uint32 vgaGetBufferHeight();
+void vgaScrollScreen();
+void vgaWriteChar(char c);
+void vgaCopyBuffer(uint8* buffer, uint32 length);
 
 #endif

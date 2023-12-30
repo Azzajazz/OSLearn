@@ -23,4 +23,12 @@ typedef struct {           \
 
 #define OPTIONAL(type) optional_##type
 
+#define OPTIONAL_PTR_DEF(type) \
+typedef struct {               \
+    bool32 exists;             \
+    type* inner;                \
+} optional_ptr_##type
+
+#define OPTIONAL_PTR(type) optional_ptr_##type
+
 #endif
