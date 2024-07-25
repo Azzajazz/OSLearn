@@ -336,6 +336,7 @@ void fmt_print(String fmt, ...) {
     va_end(args);
 }
 
+/*
 constexpr u32 PAGE_TABLE_PRESENT      = 0x1;
 constexpr u32 PAGE_TABLE_READWRITE    = 0x2;
 constexpr u32 PAGE_TABLE_SUPERVISOR   = 0x4;
@@ -356,11 +357,106 @@ constexpr u32 PAGE_GLOBAL       = 0x100;
 
 #define PAGE_SIZE KiB(4)
 #define PAGE_TABLE_SIZE 4 * 1024 // Page tables are 1024 4-byte entries
+*/                                 
+
+constexpr u8 IDT_TASK_GATE = 0x5;
+constexpr u8 IDT_INTERRUPT_GATE_16 = 0x6;
+constexpr u8 IDT_TRAP_GATE_16 = 0x7;
+constexpr u8 IDT_INTERRUPT_GATE_32 = 0xe;
+constexpr u8 IDT_TRAP_GATE_32 = 0xf;
+
+extern "C" void default_trap_handler(void);
+extern "C" void default_interrupt_handler(void);
+
+struct __attribute__((packed)) Idt_Entry {
+    u16 offset_low;
+    u16 selector;
+    u8 reserved;
+    u8 flags;
+    u16 offset_high;
+};
+
+struct __attribute__((packed)) Idtr {
+    u16 size;
+    u32 offset;
+};
+
+static volatile Idt_Entry* idt = (Idt_Entry*)0x4000;
+static volatile Idtr* idtr = (Idtr*)0x6000;
+
+constexpr u8 PIC_MASTER_COMMAND = 0x20;
+constexpr u8 PIC_MASTER_DATA = 0x21;
+constexpr u8 PIC_SLAVE_COMMAND = 0xa0;
+constexpr u8 PIC_SLAVE_DATA = 0xa1;
+
+constexpr u8 PIC_EOI_CODE = 0x20;
+
+constexpr u8 ICW1_ICW4_PRESENT = 0x01;        // 0 = ICW4 not present, 1 = ICW4 present
+constexpr u8 ICW1_SINGLE = 0x02;              // 0 = cascade mode, 1 = single mode
+constexpr u8 ICW1_CALL_ADDR_INTERVAL4 = 0x04; // 0 = call address interval 4, 1 = call address interval 8
+constexpr u8 ICW1_LEVEL_TRIGGERED = 0x08;     // 0 = edge triggered mode, 1 = level triggered mode
+constexpr u8 ICW1_INIT = 0x10;                // Initialization, must be 1
+
+constexpr u8 ICW4_8086 = 0x01;                 // 0 = MCS-80/85 mode, 1 = 8086/88 mode
+constexpr u8 ICW4_AUTO_EOI = 0x02;             // 0 = normal EOI, 1 = automatic EOI
+constexpr u8 ICW4_BUFFERED_SLAVE = 0x08;       // 0 = no buffered slave mode, 1 = buffered slave mode
+constexpr u8 ICW4_BUFFERED_MASTER = 0x0c;      // 0 = no buffered master mode, 1 = buffered master mode
+constexpr u8 ICW4_SPECIAL_FULLY_NESTED = 0x10; // 0 = not special fully nested, 1 = special fully nested
+
+void init_pic(int master_offset, int slave_offset) {
+    u8 master_mask = io_in_8(PIC_MASTER_DATA);
+    u8 slave_mask = io_in_8(PIC_SLAVE_DATA);
+    io_out_8(PIC_MASTER_COMMAND, ICW1_INIT | ICW1_ICW4_PRESENT);
+    io_wait();
+    io_out_8(PIC_SLAVE_COMMAND, ICW1_INIT | ICW1_ICW4_PRESENT);
+    io_wait();
+    io_out_8(PIC_MASTER_DATA, master_offset);
+    io_wait();
+    io_out_8(PIC_SLAVE_DATA, slave_offset);
+    io_wait();
+    io_out_8(PIC_MASTER_DATA, 4);
+    io_wait();
+    io_out_8(PIC_SLAVE_DATA, 2);
+    io_wait();
+    
+    io_out_8(PIC_MASTER_DATA, ICW4_8086);
+    io_wait();
+    io_out_8(PIC_SLAVE_DATA, ICW4_8086);
+    io_wait();
+    
+    io_out_8(PIC_MASTER_DATA, master_mask);
+    io_out_8(PIC_SLAVE_DATA, slave_mask);
+}
 
 extern "C" int kmain(void) {
     clear_screen();
     enable_cursor();
     fmt_print(as_string("Hello, world!"));
+
+    for (int i = 0; i < 32; ++i) {
+        idt[i].offset_low = (u32)default_trap_handler & 0xffff;
+        idt[i].selector = 0x8;
+        idt[i].reserved = 0;
+        idt[i].flags = (1 << 7) | IDT_TRAP_GATE_32;
+        idt[i].offset_high = (u32)default_trap_handler >> 16;
+    }
+
+    for (int i = 32; i < 256; ++i) {
+        idt[i].offset_low = (u32)default_interrupt_handler & 0xffff;
+        idt[i].selector = 0x8;
+        idt[i].reserved = 0;
+        idt[i].flags = (1 << 7) | IDT_INTERRUPT_GATE_32;
+        idt[i].offset_high = (u32)default_interrupt_handler >> 16;
+    }
+
+    idtr->size = 8 * 256 - 1;
+    idtr->offset = (u32)idt;
+
+    init_pic(0x20, 0x28);
+    asm volatile (
+        "lidt (0x6000)\n\t"
+        "sti\n\t"
+    );
 
     for(;;);
 }
