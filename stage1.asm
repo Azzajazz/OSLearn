@@ -122,8 +122,7 @@ in_protected_mode:
     mov es, ax
     mov fs, ax
     mov gs, ax
-
-    ; jmp KERNEL_PHYS_ADDR
+    mov ss, ax
 
     ; Clear out the page directory
     mov eax, 1024
