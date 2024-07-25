@@ -181,6 +181,12 @@ void print_string(String string) {
     }
 }
 
+extern "C" void print_cstring(const char* cstring) {
+    for (const char* p = cstring; *p; ++p) {
+        print_char(*p);
+    }
+}
+
 void print_u32(u32 value) {
     if (value == 0) {
         print_char('0');
