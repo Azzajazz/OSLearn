@@ -1,4 +1,5 @@
 extern "C" void pit_handler(void);
+
 extern "C" void handler_0(void);
 extern "C" void handler_1(void);
 extern "C" void handler_2(void);
@@ -516,3 +517,53 @@ static void (*handlers[256])(void) = {
     handler_254,
     handler_255,
 };
+
+constexpr u8 IDT_TASK_GATE = 0x5;
+constexpr u8 IDT_INTERRUPT_GATE_16 = 0x6;
+constexpr u8 IDT_TRAP_GATE_16 = 0x7;
+constexpr u8 IDT_INTERRUPT_GATE_32 = 0xe;
+constexpr u8 IDT_TRAP_GATE_32 = 0xf;
+
+struct __attribute__((packed)) Idt_Entry {
+    u16 offset_low;
+    u16 selector;
+    u8 reserved;
+    u8 flags;
+    u16 offset_high;
+};
+
+struct __attribute__((packed)) Idtr {
+    u16 size;
+    u32 offset;
+};
+
+static volatile Idt_Entry* idt = (Idt_Entry*)0x4000;
+static volatile Idtr* idtr = (Idtr*)0x6000;
+
+void init_idt(void) {
+    for (int i = 0; i < 32; ++i) {
+        idt[i].offset_low = (u32)handlers[i] & 0xffff;
+        idt[i].selector = 0x8;
+        idt[i].reserved = 0;
+        idt[i].flags = (1 << 7) | IDT_TRAP_GATE_32;
+        idt[i].offset_high = (u32)handlers[i] >> 16;
+    }
+
+    idt[32].offset_low = (u32)pit_handler & 0xffff;
+    idt[32].selector = 0x08;
+    idt[32].reserved = 0;
+    idt[32].flags = (1 << 7) | IDT_TRAP_GATE_32;
+    idt[32].offset_high = (u32)pit_handler >> 16;
+
+
+    for (int i = 33; i < 256; ++i) {
+        idt[i].offset_low = (u32)handlers[i] & 0xffff;
+        idt[i].selector = 0x8;
+        idt[i].reserved = 0;
+        idt[i].flags = (1 << 7) | IDT_INTERRUPT_GATE_32;
+        idt[i].offset_high = (u32)handlers[i] >> 16;
+    }
+
+    idtr->size = 8 * 256 - 1;
+    idtr->offset = (u32)idt;
+}

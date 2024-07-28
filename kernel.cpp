@@ -363,29 +363,6 @@ constexpr u32 PAGE_GLOBAL       = 0x100;
 #define PAGE_TABLE_SIZE 4 * 1024 // Page tables are 1024 4-byte entries
 */                                 
 
-constexpr u8 IDT_TASK_GATE = 0x5;
-constexpr u8 IDT_INTERRUPT_GATE_16 = 0x6;
-constexpr u8 IDT_TRAP_GATE_16 = 0x7;
-constexpr u8 IDT_INTERRUPT_GATE_32 = 0xe;
-constexpr u8 IDT_TRAP_GATE_32 = 0xf;
-
-
-struct __attribute__((packed)) Idt_Entry {
-    u16 offset_low;
-    u16 selector;
-    u8 reserved;
-    u8 flags;
-    u16 offset_high;
-};
-
-struct __attribute__((packed)) Idtr {
-    u16 size;
-    u32 offset;
-};
-
-static volatile Idt_Entry* idt = (Idt_Entry*)0x4000;
-static volatile Idtr* idtr = (Idtr*)0x6000;
-
 constexpr u8 PIC_MASTER_COMMAND = 0x20;
 constexpr u8 PIC_MASTER_DATA = 0x21;
 constexpr u8 PIC_SLAVE_COMMAND = 0xa0;
@@ -442,32 +419,7 @@ extern "C" int kmain(void) {
     enable_cursor();
     fmt_print(as_string("Hello, world!\n"));
 
-    for (int i = 0; i < 32; ++i) {
-        idt[i].offset_low = (u32)handlers[i] & 0xffff;
-        idt[i].selector = 0x8;
-        idt[i].reserved = 0;
-        idt[i].flags = (1 << 7) | IDT_TRAP_GATE_32;
-        idt[i].offset_high = (u32)handlers[i] >> 16;
-    }
-
-    idt[32].offset_low = (u32)pit_handler & 0xffff;
-    idt[32].selector = 0x08;
-    idt[32].reserved = 0;
-    idt[32].flags = (1 << 7) | IDT_TRAP_GATE_32;
-    idt[32].offset_high = (u32)pit_handler >> 16;
-
-
-    for (int i = 33; i < 256; ++i) {
-        idt[i].offset_low = (u32)handlers[i] & 0xffff;
-        idt[i].selector = 0x8;
-        idt[i].reserved = 0;
-        idt[i].flags = (1 << 7) | IDT_INTERRUPT_GATE_32;
-        idt[i].offset_high = (u32)handlers[i] >> 16;
-    }
-
-    idtr->size = 8 * 256 - 1;
-    idtr->offset = (u32)idt;
-
+    init_idt();
     init_pic(0x20, 0x28);
     asm volatile (
         "lidt (0x6000)\n\t"
