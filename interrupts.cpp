@@ -1,4 +1,5 @@
 extern "C" void pit_handler(void);
+extern "C" void keyboard_handler(void);
 
 extern "C" void handler_0(void);
 extern "C" void handler_1(void);
@@ -32,9 +33,8 @@ extern "C" void handler_28(void);
 extern "C" void handler_29(void);
 extern "C" void handler_30(void);
 extern "C" void handler_31(void);
-// Replaced with pit_handler
-// extern "C" void handler_32(void);
-extern "C" void handler_33(void);
+extern "C" void handler_32(void);
+extern "C" void handler_33(void); // Replaced with pit_handler
 extern "C" void handler_34(void);
 extern "C" void handler_35(void);
 extern "C" void handler_36(void);
@@ -291,9 +291,8 @@ static void (*handlers[256])(void) = {
     handler_29,
     handler_30,
     handler_31,
-    // Replaced with pit_handler
-    // handler_32,
-    handler_33,
+    handler_32, // Replaced with pit_handler
+    handler_33, // Replaced with keyboard_handler
     handler_34,
     handler_35,
     handler_36,
@@ -549,20 +548,25 @@ void init_idt(void) {
         idt[i].offset_high = (u32)handlers[i] >> 16;
     }
 
-    idt[32].offset_low = (u32)pit_handler & 0xffff;
-    idt[32].selector = 0x08;
-    idt[32].reserved = 0;
-    idt[32].flags = (1 << 7) | IDT_TRAP_GATE_32;
-    idt[32].offset_high = (u32)pit_handler >> 16;
-
-
-    for (int i = 33; i < 256; ++i) {
+    for (int i = 32; i < 256; ++i) {
         idt[i].offset_low = (u32)handlers[i] & 0xffff;
         idt[i].selector = 0x8;
         idt[i].reserved = 0;
         idt[i].flags = (1 << 7) | IDT_INTERRUPT_GATE_32;
         idt[i].offset_high = (u32)handlers[i] >> 16;
     }
+
+    idt[32].offset_low = (u32)pit_handler & 0xffff;
+    idt[32].selector = 0x08;
+    idt[32].reserved = 0;
+    idt[32].flags = (1 << 7) | IDT_TRAP_GATE_32;
+    idt[32].offset_high = (u32)pit_handler >> 16;
+
+    idt[33].offset_low = (u32)keyboard_handler & 0xffff;
+    idt[33].selector = 0x08;
+    idt[33].reserved = 0;
+    idt[33].flags = (1 << 7) | IDT_TRAP_GATE_32;
+    idt[33].offset_high = (u32)keyboard_handler >> 16;
 
     idtr->size = 8 * 256 - 1;
     idtr->offset = (u32)idt;

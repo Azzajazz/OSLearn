@@ -11,10 +11,21 @@ bits 32
 jmp _kmain
 
 ; @Handler
-; The PIT handler. This exists here since the PIT is automatically enabled and will fire interrupts continuously.
+; This handler has been written early in development since the PIT is automatically enabled and will fire interrupts that must be handled
 global _pit_handler
 _pit_handler:
     push 0
+    call _pic_send_eoi
+    add esp, 4
+    iret
+
+; @Handler
+global _keyboard_handler
+_keyboard_handler:
+    push KEYBOARD_MESSAGE
+    call _print_cstring
+    add esp, 4
+    push 2
     call _pic_send_eoi
     add esp, 4
     iret
@@ -291,3 +302,4 @@ handler 255
 
 TRAP_MESSAGE: db "TRAP!", 0x0a, 0
 INTERRUPT_MESSAGE: db "INTERRUPT!", 0x0a, 0
+KEYBOARD_MESSAGE: db "IN KEYBOARD HANDLER!", 0x0a, 0
