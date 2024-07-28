@@ -15,6 +15,8 @@ typedef double f64;
 #define KiB(x) ((x) * 1024)
 #define MiB(x) (KiB(x) * 1024)
 
+#include "interrupts.cpp"
+
 // These are symbols defined in the linker script
 extern char kernel_virt_start;
 extern char kernel_virt_end;
@@ -181,13 +183,15 @@ void print_string(String string) {
     }
 }
 
+// This is extern "C" since it is called from interrupt handlers in kernel_entry.asm
 extern "C" void print_cstring(const char* cstring) {
     for (const char* p = cstring; *p; ++p) {
         print_char(*p);
     }
 }
 
-void print_u32(u32 value) {
+// This is extern "C" since it is called from interrupt handlers in kernel_entry.asm
+extern "C" void print_u32(u32 value) {
     if (value == 0) {
         print_char('0');
         return;
@@ -365,8 +369,6 @@ constexpr u8 IDT_TRAP_GATE_16 = 0x7;
 constexpr u8 IDT_INTERRUPT_GATE_32 = 0xe;
 constexpr u8 IDT_TRAP_GATE_32 = 0xf;
 
-extern "C" void default_trap_handler(void);
-extern "C" void default_interrupt_handler(void);
 
 struct __attribute__((packed)) Idt_Entry {
     u16 offset_low;
@@ -428,25 +430,39 @@ void init_pic(int master_offset, int slave_offset) {
     io_out_8(PIC_SLAVE_DATA, slave_mask);
 }
 
+extern "C" void pic_send_eoi(u8 irq) {
+    if (irq >= 8)
+        io_out_8(PIC_SLAVE_COMMAND, PIC_EOI_CODE);
+
+    io_out_8(PIC_MASTER_COMMAND, PIC_EOI_CODE);
+}
+
 extern "C" int kmain(void) {
     clear_screen();
     enable_cursor();
-    fmt_print(as_string("Hello, world!"));
+    fmt_print(as_string("Hello, world!\n"));
 
     for (int i = 0; i < 32; ++i) {
-        idt[i].offset_low = (u32)default_trap_handler & 0xffff;
+        idt[i].offset_low = (u32)handlers[i] & 0xffff;
         idt[i].selector = 0x8;
         idt[i].reserved = 0;
         idt[i].flags = (1 << 7) | IDT_TRAP_GATE_32;
-        idt[i].offset_high = (u32)default_trap_handler >> 16;
+        idt[i].offset_high = (u32)handlers[i] >> 16;
     }
 
-    for (int i = 32; i < 256; ++i) {
-        idt[i].offset_low = (u32)default_interrupt_handler & 0xffff;
+    idt[32].offset_low = (u32)pit_handler & 0xffff;
+    idt[32].selector = 0x08;
+    idt[32].reserved = 0;
+    idt[32].flags = (1 << 7) | IDT_TRAP_GATE_32;
+    idt[32].offset_high = (u32)pit_handler >> 16;
+
+
+    for (int i = 33; i < 256; ++i) {
+        idt[i].offset_low = (u32)handlers[i] & 0xffff;
         idt[i].selector = 0x8;
         idt[i].reserved = 0;
         idt[i].flags = (1 << 7) | IDT_INTERRUPT_GATE_32;
-        idt[i].offset_high = (u32)default_interrupt_handler >> 16;
+        idt[i].offset_high = (u32)handlers[i] >> 16;
     }
 
     idtr->size = 8 * 256 - 1;
