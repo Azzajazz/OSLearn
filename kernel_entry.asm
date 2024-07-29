@@ -21,11 +21,10 @@ _pit_handler:
 
 ; @Handler
 global _keyboard_handler
+extern _keyboard_handler_inner
 _keyboard_handler:
     push KEYBOARD_MESSAGE
-    call _print_cstring
-    add esp, 4
-    push 2
+    call _keyboard_handler_inner
     call _pic_send_eoi
     add esp, 4
     iret
