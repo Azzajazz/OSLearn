@@ -414,6 +414,48 @@ extern "C" void pic_send_eoi(u8 irq) {
     io_out_8(PIC_MASTER_COMMAND, PIC_EOI_CODE);
 }
 
+template<typename T>
+struct Optional {
+    bool exists;
+    T value;
+};
+
+template<typename T, u32 n>
+struct Sized_Queue {
+    T data[n];
+    u32 head;
+    u32 tail;
+};
+
+template<typename T, u32 n>
+bool push_back(Sized_Queue<T, n>* queue, T elem) {
+    u32 next_tail = (queue->tail + 1) % n;
+    if (next_tail == queue->head) return false;
+    
+    queue->data[queue->tail] = elem;
+    queue->tail = next_tail;
+    return true;
+}
+
+template <typename T, u32 n>
+Optional<T> pop_front(Sized_Queue<T, n>* queue) {
+    if (queue->head == queue->tail) return {};
+
+    Optional<T> result = {};
+    result.exists = true;
+    result.value = queue->data[queue->head];
+    queue->head++;
+    return result;
+}
+
+static Sized_Queue<u8, 10> key_event_queue = {};
+
+extern "C" void keyboard_handler_inner(void) {
+    u8 key = io_in_8(0x60);
+    fmt_print(as_string("%u8\n"), key);
+    push_back(&key_event_queue, key);
+}
+
 extern "C" int kmain(void) {
     clear_screen();
     enable_cursor();
