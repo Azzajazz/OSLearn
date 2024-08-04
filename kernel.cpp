@@ -441,6 +441,11 @@ bool push_back(Sized_Queue<T, n>* queue, T elem) {
     return true;
 }
 
+template<typename T, u32 n>
+bool is_empty(Sized_Queue<T, n>* queue) {
+    return queue->head == queue->tail;
+}
+
 template <typename T, u32 n>
 Optional<T> pop_front(Sized_Queue<T, n>* queue) {
     if (queue->head == queue->tail) return {};
@@ -448,11 +453,17 @@ Optional<T> pop_front(Sized_Queue<T, n>* queue) {
     Optional<T> result = {};
     result.exists = true;
     result.value = queue->data[queue->head];
-    queue->head++;
+    queue->head = (queue->head + 1) % n;
     return result;
 }
 
 static Sized_Queue<u8, 10> key_event_queue = {};
+template <typename T, u32 n>
+T pop_front_unchecked(Sized_Queue<T, n>* queue) {
+    T result = queue->data[queue->head];
+    queue->head = (queue->head + 1) % n;
+    return result;
+}
 
 extern "C" void keyboard_handler_inner(void) {
     u8 key = io_in_8(0x60);
