@@ -255,28 +255,28 @@ enum class Fmt_Print_State {
     Hexadecimal,
 };
 
-void fmt_print(String fmt, ...) {
+void fmt_print(const char* fmt, ...) {
     Fmt_Print_State state = Fmt_Print_State::NoFormat;
 
     va_list args;
     va_start(args, fmt);
 
-    u32 i = 0;
+    const char* p = fmt;
 
-    while (i < fmt.length) {
+    while (*p) {
         switch (state) {
             case Fmt_Print_State::NoFormat: {
-                if (fmt.data[i] == '%') {
+                if (*p == '%') {
                     state = Fmt_Print_State::Specifier;
                 }
                 else {
-                    print_char(fmt.data[i]);
+                    print_char(*p);
                 }
-                i++;
+                p++;
             } break;
 
             case Fmt_Print_State::Specifier: {
-                switch (fmt.data[i]) {
+                switch (*p) {
                     case 's': {
                         print_string(va_arg(args, String));
                         state = Fmt_Print_State::NoFormat;
@@ -296,23 +296,27 @@ void fmt_print(String fmt, ...) {
                         print_char('%');
                         state = Fmt_Print_State::NoFormat;
                     } break;
+                    case 'c': {
+                        print_char(va_arg(args, u32));
+                        state = Fmt_Print_State::NoFormat;
+                    } break;
                     default: {
-                        print_char(fmt.data[i]);
+                        print_char(*p);
                         state = Fmt_Print_State::NoFormat;
                     } break;
                 }
-                i++;
+                p++;
             } break;
 
             case Fmt_Print_State::Unsigned: {
-                if (fmt.data[i] == '8') {
+                if (*p == '8') {
                     print_u32(va_arg(args, u32));
-                    i++;
+                    p++;
                 }
-                else if ((fmt.data[i] == '1' && fmt.data[i + 1] == '6')
-                        || (fmt.data[i] == '3' && fmt.data[i + 1] == '2')) {
+                else if ((*p == '1' && p[1] == '6')
+                        || (*p == '3' && p[1] == '2')) {
                     print_u32(va_arg(args, u32));
-                    i += 2;
+                    p += 2;
                 }
                 state = Fmt_Print_State::NoFormat;
             } break;
@@ -323,14 +327,14 @@ void fmt_print(String fmt, ...) {
             */
 
             case Fmt_Print_State::Hexadecimal: {
-                if (fmt.data[i] == '8') {
+                if (*p == '8') {
                     print_u32_hex(va_arg(args, u32));
-                    i++;
+                    p++;
                 }
-                else if ((fmt.data[i] == '1' && fmt.data[i + 1] == '6')
-                        || (fmt.data[i] == '3' && fmt.data[i + 1] == '2')) {
+                else if ((*p == '1' && p[1] == '6')
+                        || (*p == '3' && p[1] == '2')) {
                     print_u32_hex(va_arg(args, u32));
-                    i += 2;
+                    p += 2;
                 }
                 state = Fmt_Print_State::NoFormat;
             } break;
