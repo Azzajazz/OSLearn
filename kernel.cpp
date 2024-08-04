@@ -457,7 +457,6 @@ Optional<T> pop_front(Sized_Queue<T, n>* queue) {
     return result;
 }
 
-static Sized_Queue<u8, 10> key_event_queue = {};
 template <typename T, u32 n>
 T pop_front_unchecked(Sized_Queue<T, n>* queue) {
     T result = queue->data[queue->head];
@@ -465,16 +464,74 @@ T pop_front_unchecked(Sized_Queue<T, n>* queue) {
     return result;
 }
 
+static Sized_Queue<u8, 10> key_queue = {};
+constexpr u8 scan_code_1_map[] = {
+    0x00, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d,
+    0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c,
+    0x6c,
+    0xa0,
+    0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b,
+    0x20,
+    0x80,
+    0x2d,
+    0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b,
+    0x33,
+    0xa2, 0xa3,
+    0x60,
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+    0x31,
+    0x0e,
+    0x51, 0x52, 0x53,
+    0x34,
+    0x6d, 0x6e, 0x6f,
+    0x54,
+    0x8d, 0x8e, 0x8f,
+    0xaa, 0xab,
+    0, 0, 0, // Padding
+    0x0b, 0x0c,
+};
+// @TODO: Multimedia key mappings
+
+constexpr u8 us_qwerty_ascii_map[] = {
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,    0,   0,    0,   0,   0, 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    '`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',  '-', '=',    0,   0,   0, 0,   0, '/', '*', '-', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',  '[', ']', '\\',   0,   0, 0, '7', '8', '9', '+', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'',   0,  '4', '5', '6', 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/',    0,   0,  '1', '2', '3', 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0,   0,   0, ' ',   0,   0,   0,   0,   0,   0, '0',  '.',   0,    0,   0,   0, 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
 extern "C" void keyboard_handler_inner(void) {
     u8 key = io_in_8(0x60);
-    fmt_print(as_string("%u8\n"), key);
-    push_back(&key_event_queue, key);
+    push_back(&key_queue, key);
+}
+
+struct Key_Event {
+    u8 key_code;
+    u8 ascii_code;
+    bool pressed;
+};
+
+Key_Event get_key_event(void) {
+    // @TODO: Implement a spin-lock to remove potential race conditions with the keyboard interrupt.
+    while (is_empty(&key_queue));
+    u8 key = pop_front_unchecked(&key_queue) - 1;
+    Key_Event result = {};
+    
+    result.pressed = key < 0x80;
+    if (key < 0x80)
+        result.key_code = scan_code_1_map[key];
+    else
+        result.key_code = scan_code_1_map[key - 0x80];
+    result.ascii_code = us_qwerty_ascii_map[result.key_code];
+
+    return result;
 }
 
 extern "C" int kmain(void) {
     clear_screen();
     enable_cursor();
-    fmt_print(as_string("Hello, world!\n"));
+    fmt_print("Hello, world!\n");
 
     init_idt();
     init_pic(0x20, 0x28);
@@ -483,5 +540,13 @@ extern "C" int kmain(void) {
         "sti\n\t"
     );
 
-    for(;;);
+    for (;;) {
+        Key_Event event = get_key_event();
+        (void)event;
+//        fmt_print("Key code: %x8\n", event.key_code);
+//        fmt_print("Ascii code: %c\n", event.ascii_code);
+//        fmt_print("Pressed: %u8\n", event.pressed);
+        if (event.pressed)
+            print_char(event.ascii_code);
+    }
 }
