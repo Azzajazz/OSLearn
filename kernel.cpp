@@ -464,8 +464,16 @@ T pop_front_unchecked(Sized_Queue<T, n>* queue) {
     return result;
 }
 
-static Sized_Queue<u8, 10> key_queue = {};
-constexpr u8 scan_code_1_map[] = {
+struct Key_Event {
+    u8 key_code;
+    u8 ascii_code;
+    bool pressed;
+    u8 meta_mask;
+};
+
+static Sized_Queue<Key_Event, 10> g_key_event_queue = {};
+static bool g_key_states[256] = {};
+constexpr u8 g_scan_code_1_map[] = {
     0x00, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d,
     0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c,
     0x6c,
@@ -492,7 +500,7 @@ constexpr u8 scan_code_1_map[] = {
 };
 // @TODO: Multimedia key mappings
 
-constexpr u8 us_qwerty_ascii_map[] = {
+constexpr u8 g_us_qwerty_lower_ascii_map[] = {
       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,    0,   0,    0,   0,   0, 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     '`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',  '-', '=',    0,   0,   0, 0,   0, '/', '*', '-', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',  '[', ']', '\\',   0,   0, 0, '7', '8', '9', '+', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -501,31 +509,60 @@ constexpr u8 us_qwerty_ascii_map[] = {
       0,   0,   0, ' ',   0,   0,   0,   0,   0,   0, '0',  '.',   0,    0,   0,   0, 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
-extern "C" void keyboard_handler_inner(void) {
-    u8 key = io_in_8(0x60);
-    push_back(&key_queue, key);
-}
-
-struct Key_Event {
-    u8 key_code;
-    u8 ascii_code;
-    bool pressed;
+constexpr u8 g_us_qwerty_upper_ascii_map[] = {
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+',   0,   0,   0, 0,   0, '/', '*', '-', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '|',   0,   0, 0, '7', '8', '9', '+', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"',   0, '4', '5', '6', 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?',   0,   0, '1', '2', '3', 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0,   0,   0, ' ',   0,   0,   0,   0,   0,   0, '0', '.',   0,   0,   0,   0, 0,   0,   0,   0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
+
+constexpr u8 LEFT_SHIFT = 0x01;
+constexpr u8 LEFT_ALT = 0x02;
+constexpr u8 LEFT_CTRL = 0x04;
+constexpr u8 RIGHT_SHIFT = 0x08;
+constexpr u8 RIGHT_ALT = 0x10;
+constexpr u8 RIGHT_CTRL = 0x20;
+
+extern "C" void keyboard_handler_inner(void) {
+    // @TODO: Multi-code key presses
+    u8 key = io_in_8(0x60);
+    
+    Key_Event event = {};
+    event.pressed = key < 0x81;   
+    if (key < 0x81)
+        event.key_code = g_scan_code_1_map[key - 1];
+    else
+        event.key_code = g_scan_code_1_map[key - 0x81];
+
+    // Toggle the key states
+    // @TODO: Is it possible to start with a key pressed?
+    g_key_states[event.key_code] = !g_key_states[event.key_code];
+    
+    if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
+    if (g_key_states[0xa0]) event.meta_mask |= LEFT_CTRL;
+    if (g_key_states[0xa2]) event.meta_mask |= LEFT_ALT;
+    if (g_key_states[0x8b]) event.meta_mask |= RIGHT_SHIFT;
+    // @TODO: These are multi-code.
+    /*
+    if (g_key_states[0xa0]) event.meta_mask |= RIGHT_CTRL;
+    if (g_key_states[0xa2]) event.meta_mask |= RIGHT_ALT;
+    */
+
+    //@TODO: Caps lock
+    if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
+        event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
+    else
+        event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+
+    push_back(&g_key_event_queue, event);
+}
 
 Key_Event get_key_event(void) {
     // @TODO: Implement a spin-lock to remove potential race conditions with the keyboard interrupt.
-    while (is_empty(&key_queue));
-    u8 key = pop_front_unchecked(&key_queue) - 1;
-    Key_Event result = {};
-    
-    result.pressed = key < 0x80;
-    if (key < 0x80)
-        result.key_code = scan_code_1_map[key];
-    else
-        result.key_code = scan_code_1_map[key - 0x80];
-    result.ascii_code = us_qwerty_ascii_map[result.key_code];
-
-    return result;
+    while (is_empty(&g_key_event_queue));
+    return pop_front_unchecked(&g_key_event_queue);
 }
 
 extern "C" int kmain(void) {
