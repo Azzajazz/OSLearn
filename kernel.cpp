@@ -464,8 +464,165 @@ T pop_front_unchecked(Sized_Queue<T, n>* queue) {
     return result;
 }
 
+template <u32 n>
+struct Sized_String_Builder {
+    char data[n];
+    u32 length;
+};
+
+template <u32 n>
+void append_char(Sized_String_Builder<n>* builder, char c) {
+    if (builder->length >= n) return;
+
+    builder->data[builder->length] = c;
+    builder->length++;
+}
+
+template <u32 n>
+String to_string(Sized_String_Builder<n>* builder) {
+    return (String){builder->data, builder->length};
+}
+
+enum class Key_Code : u8 {
+    Escape,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    PrintScreen,
+    ScrollLock,
+    PauseBreak,
+
+    Tilde = 0x20,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Zero,
+    Minus,
+    Equals,
+    Backspace,
+    Insert,
+    Home,
+    PageUp,
+    NumLock,
+    NumpadSlash,
+    NumpadStar,
+    NumpadMinus,
+
+    Tab = 0x40,
+    Q,
+    W,
+    E,
+    R,
+    T,
+    Y,
+    U,
+    I,
+    O,
+    P,
+    LeftBracket,
+    RightBracket,
+    Backslash,
+    Delete,
+    End,
+    PageDown,
+    NumpadSeven,
+    NumpadEight,
+    NumpadNine,
+    NumpadPlus,
+
+    CapsLock = 0x60,
+    A,
+    S,
+    D,
+    F,
+    G,
+    H,
+    J,
+    K,
+    L,
+    Semicolon,
+    Quote,
+    Enter,
+    NumpadFour,
+    NumpadFive,
+    NumpadSix,
+
+    LeftShift = 0x80,
+    Z,
+    X,
+    C,
+    V,
+    B,
+    N,
+    M,
+    Comma,
+    Period,
+    Forwardslash,
+    RightShift,
+    Up,
+    NumpadOne,
+    NumpadTwo,
+    NumpadThree,
+    NumpadEnter,
+
+    LeftCtrl = 0xa0,
+    Windows,
+    LeftAlt,
+    Space,
+    RightAlt,
+    Menu,
+    RightCtrl,
+    Left,
+    Down,
+    Right,
+    NumpadZero,
+    NumpadPeriod,
+
+    PreviousTrack,
+    NextTrack,
+    Mute,
+    Calculator,
+    Play,
+    Stop,
+    VolumeDown,
+    VolumeUp,
+    WWWHome,
+    WWWSearch,
+    WWWFavourites,
+    WWWRefresh,
+    WWWStop,
+    WWWForward,
+    WWWBack,
+    MyComputer,
+    Email,
+    MediaSelect,
+    LeftGUI,
+    RightGUI,
+    Apps,
+    Power,
+    Sleep,
+    Wake,
+
+    Pause,
+};
+
 struct Key_Event {
-    u8 key_code;
+    Key_Code key_code;
     u8 ascii_code;
     bool pressed;
     u8 meta_mask;
@@ -473,6 +630,7 @@ struct Key_Event {
 
 static Sized_Queue<Key_Event, 10> g_key_event_queue = {};
 static bool g_key_states[256] = {};
+// @TODO: This should really be an array of Key_Codes so that the two remain consistent with each other.
 constexpr u8 g_scan_code_1_single_map[] = {
     0x00, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d,
     0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c,
@@ -591,16 +749,16 @@ extern "C" void keyboard_handler_inner(void) {
             Key_Event event = {};
             event.pressed = key < 0x81;   
             if (key < 0x81)
-                event.key_code = g_scan_code_1_single_map[key - 1];
+                event.key_code = (Key_Code)g_scan_code_1_single_map[key - 1];
             else
-                event.key_code = g_scan_code_1_single_map[key - 0x81];
+                event.key_code = (Key_Code)g_scan_code_1_single_map[key - 0x81];
 
             // Toggle the key states
             // @TODO: Is it possible to start with a key pressed?
             // @TODO: Localized caps lock, scroll lock, num lock
-            if (!event.pressed || (event.key_code != 0x60 && event.key_code != 0x31 && event.key_code != 0x0e)) {
-                // Caps lock (0x60), num lock (0x31) and scroll lock (0x0e) are toggled in the key state map on press and not on release
-                g_key_states[event.key_code] = !g_key_states[event.key_code];
+            if (!event.pressed || (event.key_code != Key_Code::CapsLock && event.key_code != Key_Code::ScrollLock && event.key_code != Key_Code::NumLock)) {
+                // Caps lock, num lock and scroll lock are toggled in the key state map on press and not on release
+                g_key_states[(u8)event.key_code] = !g_key_states[(u8)event.key_code];
             }
             
             if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
@@ -613,15 +771,15 @@ extern "C" void keyboard_handler_inner(void) {
             if (g_key_states[0x60]) {
                 // Caps lock enabled
                 if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
-                    event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_lower_ascii_map[(u8)event.key_code];
                 else
-                    event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_upper_ascii_map[(u8)event.key_code];
             }
             else {
                 if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
-                    event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_upper_ascii_map[(u8)event.key_code];
                 else
-                    event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_lower_ascii_map[(u8)event.key_code];
             }
 
             push_back(&g_key_event_queue, event);
@@ -640,13 +798,13 @@ extern "C" void keyboard_handler_inner(void) {
             Key_Event event = {};
             event.pressed = key < 0x99;   
             if (key < 0x99)
-                event.key_code = g_scan_code_1_multi_map[key - 0x10];
+                event.key_code = (Key_Code)g_scan_code_1_multi_map[key - 0x10];
             else
-                event.key_code = g_scan_code_1_multi_map[key - 0x90];
+                event.key_code = (Key_Code)g_scan_code_1_multi_map[key - 0x90];
 
             // Toggle the key states
             // @TODO: Is it possible to start with a key pressed?
-            g_key_states[event.key_code] = !g_key_states[event.key_code];
+            g_key_states[(u8)event.key_code] = !g_key_states[(u8)event.key_code];
             
             if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
             if (g_key_states[0xa0]) event.meta_mask |= LEFT_CTRL;
@@ -658,15 +816,15 @@ extern "C" void keyboard_handler_inner(void) {
             if (g_key_states[0x60]) {
                 // Caps lock enabled
                 if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
-                    event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_lower_ascii_map[(u8)event.key_code];
                 else
-                    event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_upper_ascii_map[(u8)event.key_code];
             }
             else {
                 if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
-                    event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_upper_ascii_map[(u8)event.key_code];
                 else
-                    event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+                    event.ascii_code = g_us_qwerty_lower_ascii_map[(u8)event.key_code];
             }
 
             push_back(&g_key_event_queue, event);
@@ -689,11 +847,11 @@ extern "C" void keyboard_handler_inner(void) {
             }
 
             Key_Event event = {};
-            event.key_code = 0x0d;
+            event.key_code = Key_Code::PrintScreen;
             event.pressed = true;
 
             // Toggle key state
-            g_key_states[event.key_code] = !g_key_states[event.key_code];
+            g_key_states[(u8)event.key_code] = !g_key_states[(u8)event.key_code];
 
             if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
             if (g_key_states[0xa0]) event.meta_mask |= LEFT_CTRL;
@@ -722,11 +880,11 @@ extern "C" void keyboard_handler_inner(void) {
             }
 
             Key_Event event = {};
-            event.key_code = 0x0d;
+            event.key_code = Key_Code::PrintScreen;
             event.pressed = false;
 
             // Toggle key state
-            g_key_states[event.key_code] = !g_key_states[event.key_code];
+            g_key_states[(u8)event.key_code] = !g_key_states[(u8)event.key_code];
 
             if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
             if (g_key_states[0xa0]) event.meta_mask |= LEFT_CTRL;
@@ -782,7 +940,7 @@ extern "C" void keyboard_handler_inner(void) {
             }
 
             Key_Event event = {};
-            event.key_code = 0x0d;
+            event.key_code = Key_Code::Pause;
             event.pressed = true;
 
             if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
@@ -816,16 +974,26 @@ extern "C" int kmain(void) {
         "sti\n\t"
     );
 
+    Sized_String_Builder<256> input = {};
+
+    fmt_print("> ");
     for (;;) {
         Key_Event event = get_key_event();
-        (void)event;
 //        fmt_print("Key code: %x8\n", event.key_code);
 //        fmt_print("Ascii code: %c\n", event.ascii_code);
 //        fmt_print("Pressed: %u8\n", event.pressed);
-        if (event.pressed && event.ascii_code) {
-            if (event.meta_mask & LEFT_CTRL || event.meta_mask & RIGHT_CTRL)
-                print_char('^');
-            print_char(event.ascii_code);
+
+        if (event.pressed) {
+            if (event.key_code == Key_Code::Enter) {
+                print_char('\n');
+                fmt_print("%s\n", to_string(&input));
+                fmt_print("> ");
+                input.length = 0;
+            }
+            if (event.ascii_code) {
+                print_char(event.ascii_code);
+                append_char(&input, event.ascii_code);
+            }
         }
     }
 }
