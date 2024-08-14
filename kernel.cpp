@@ -538,7 +538,11 @@ extern "C" void keyboard_handler_inner(void) {
 
     // Toggle the key states
     // @TODO: Is it possible to start with a key pressed?
-    g_key_states[event.key_code] = !g_key_states[event.key_code];
+    // @TODO: Localized caps lock, scroll lock, num lock
+    if (!event.pressed || (event.key_code != 0x60 && event.key_code != 0x31 && event.key_code != 0x0e)) {
+        // Caps lock (0x60), num lock (0x31) and scroll lock (0x0e) are toggled in the key state map on press and not on release
+        g_key_states[event.key_code] = !g_key_states[event.key_code];
+    }
     
     if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
     if (g_key_states[0xa0]) event.meta_mask |= LEFT_CTRL;
@@ -550,11 +554,18 @@ extern "C" void keyboard_handler_inner(void) {
     if (g_key_states[0xa2]) event.meta_mask |= RIGHT_ALT;
     */
 
-    //@TODO: Caps lock
-    if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
-        event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
-    else
-        event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+    if (g_key_states[0x60]) {
+        if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
+            event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+        else
+            event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
+    }
+    else {
+        if ((event.meta_mask & LEFT_SHIFT) || (event.meta_mask & RIGHT_SHIFT))
+            event.ascii_code = g_us_qwerty_upper_ascii_map[event.key_code];
+        else
+            event.ascii_code = g_us_qwerty_lower_ascii_map[event.key_code];
+    }
 
     push_back(&g_key_event_queue, event);
 }
