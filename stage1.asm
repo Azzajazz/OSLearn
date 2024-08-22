@@ -181,6 +181,12 @@ put_directory_entries:
     add ebx, PAGE_DIR_PHYS_ADDR
     mov dword [ebx], KERNEL_TABLE_PHYS_ADDR
     or dword [ebx], 0x3
+    ; Map the page directory to itself in the last entry
+    mov ebx, 1023
+    shl ebx, 2
+    add ebx, PAGE_DIR_PHYS_ADDR
+    mov dword [ebx], PAGE_DIR_PHYS_ADDR
+    or dword [ebx], 0x3
 
     ; Enable paging
     mov eax, PAGE_DIR_PHYS_ADDR

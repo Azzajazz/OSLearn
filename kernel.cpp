@@ -17,10 +17,6 @@ typedef double f64;
 
 #include "interrupts.cpp"
 
-// These are symbols defined in the linker script
-extern char kernel_virt_start;
-extern char kernel_virt_end;
-
 u8 io_in_8(u16 port) {
     u8 result;
     asm volatile("in %%dx, %%al" : "=a" (result) : "d" (port));
@@ -344,6 +340,16 @@ void fmt_print(const char* fmt, ...) {
     va_end(args);
 }
 
+extern char kernel_phys_end; // This is already page aligned by the linker script
+
+// @TODO: Eventually this page table region will have to be mapped as well. How do we deal with that?
+static u32 next_free_page_table = (u32)&kernel_phys_end;
+static u32 next_free_page_table_entry = next_free_page_table;
+static u32 next_unmapped_page = next_free_page_table + 1024 * 1024 * 4;
+static u32 next_free_address = next_unmapped_page;
+
+constexpr u32 PAGE_SIZE = KiB(4);
+
 /*
 constexpr u32 PAGE_TABLE_PRESENT      = 0x1;
 constexpr u32 PAGE_TABLE_READWRITE    = 0x2;
@@ -363,9 +369,8 @@ constexpr u32 PAGE_DIRTY        = 0x40;
 constexpr u32 PAGE_PAT          = 0x80;
 constexpr u32 PAGE_GLOBAL       = 0x100;
 
-#define PAGE_SIZE KiB(4)
-#define PAGE_TABLE_SIZE 4 * 1024 // Page tables are 1024 4-byte entries
-*/                                 
+constexpr u32 PAGE_TABLE_SIZE = 4 * 1024 // Page tables are 1024 4-byte entries
+*/
 
 constexpr u8 PIC_MASTER_COMMAND = 0x20;
 constexpr u8 PIC_MASTER_DATA = 0x21;
@@ -852,7 +857,6 @@ extern "C" void keyboard_handler_inner(void) {
 
             // Toggle key state
             g_key_states[(u8)event.key_code] = !g_key_states[(u8)event.key_code];
-
             if (g_key_states[0x80]) event.meta_mask |= LEFT_SHIFT;
             if (g_key_states[0xa0]) event.meta_mask |= LEFT_CTRL;
             if (g_key_states[0xa2]) event.meta_mask |= LEFT_ALT;
@@ -969,6 +973,7 @@ extern "C" int kmain(void) {
 
     init_idt();
     init_pic(0x20, 0x28);
+    
     asm volatile (
         "lidt (0x6000)\n\t"
         "sti\n\t"
